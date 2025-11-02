@@ -11,16 +11,27 @@ Continuous fine-tuning framework for speech-to-text models with autonomous error
 ## Project Structure
 
 stt-agentic-ai/
+
 ├── src/ # Source code modules
+
 │ ├── data/ # Data processing utilities
+
 │ ├── models/ # Model architectures
+
 │ ├── evaluation/ # Evaluation metrics
+
 │ └── utils/ # Helper functions
+
 ├── scripts/ # Executable scripts
+
 ├── configs/ # Configuration files
+
 ├── data/ # Data directory (not in git)
+
 ├── tests/ # Unit tests
+
 ├── docs/ # Documentation
+
 └── notebooks/ # Jupyter notebooks
 
 ## Setup Instructions
@@ -35,7 +46,7 @@ stt-agentic-ai/
 - [x] Preprocessing pipelines
 
 ## Google Cloud Resources
-- **Project ID:** stt-agentic-ai-2025
-- **Dataset Bucket:** gs://stt-project-datasets
-- **Model Bucket:** gs://stt-project-models
-- **Logs Bucket:** gs://stt-project-logs
+- **Project ID:** adaptive-agentic-system
+- **Dataset Bucket:** gs://project-datasets
+- **Model Bucket:** gs://project-models
+- **Logs Bucket:** gs://project-logs
