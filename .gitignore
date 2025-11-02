@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# Data (never commit large datasets)
+data/raw/*
+data/processed/*
+data/augmented/*
+data/evaluation/*
+*.wav
+*.mp3
+*.flac
+!data/*/.gitkeep
+
+# Model files
+models/
+checkpoints/
+*.pth
+*.pt
+*.h5
+*.pkl
+
+# Credentials
+*.json
+!configs/**/*.json
+credentials/
+.env
+.gcp-credentials.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
