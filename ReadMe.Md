@@ -46,7 +46,7 @@ stt-agentic-ai/
 - [x] Preprocessing pipelines
 
 ## Google Cloud Resources
-- **Project ID:** stt-agentic-ai-2025
-- **Dataset Bucket:** gs://stt-project-datasets
-- **Model Bucket:** gs://stt-project-models
-- **Logs Bucket:** gs://stt-project-logs
+- **Project ID:** adaptive-agentic-system
+- **Dataset Bucket:** gs://project-datasets
+- **Model Bucket:** gs://project-models
+- **Logs Bucket:** gs://project-logs
