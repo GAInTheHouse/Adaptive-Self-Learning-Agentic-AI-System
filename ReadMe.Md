@@ -11,16 +11,27 @@ Continuous fine-tuning framework for speech-to-text models with autonomous error
 ## Project Structure
 
 stt-agentic-ai/
+
 ├── src/ # Source code modules
+
 │ ├── data/ # Data processing utilities
+
 │ ├── models/ # Model architectures
+
 │ ├── evaluation/ # Evaluation metrics
+
 │ └── utils/ # Helper functions
+
 ├── scripts/ # Executable scripts
+
 ├── configs/ # Configuration files
+
 ├── data/ # Data directory (not in git)
+
 ├── tests/ # Unit tests
+
 ├── docs/ # Documentation
+
 └── notebooks/ # Jupyter notebooks
 
 ## Setup Instructions
