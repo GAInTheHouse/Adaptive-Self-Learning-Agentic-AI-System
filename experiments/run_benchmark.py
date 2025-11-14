@@ -2,10 +2,7 @@
 Task 4: Benchmark the baseline model
 """
 
-import sys
-sys.path.insert(0, '../src')
-
-from benchmark import BaselineBenchmark
+from src.benchmark import BaselineBenchmark
 import os
 
 if __name__ == "__main__":

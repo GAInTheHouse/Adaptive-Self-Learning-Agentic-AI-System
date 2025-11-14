@@ -2,10 +2,7 @@
 Task 2: Test baseline model loading and single inference
 """
 
-import sys
-sys.path.insert(0, '../src')
-
-from baseline_model import BaselineSTTModel
+from src.baseline_model import BaselineSTTModel
 import os
 
 if __name__ == "__main__":
