@@ -1,0 +1,52 @@
+(.venv) shivangikumar@Mac Adaptive-Self-Learning-Agentic-AI-System % python -m experiments.evaluate_models
+==================================================
+TASK 1: Model Evaluation
+==================================================
+✅ Created test_audio/test_1.wav
+
+🔍 Comparing Whisper vs Wav2Vec2...
+
+🔍 Loading models...
+preprocessor_config.json: 185kB [00:00, 250MB/s]
+tokenizer_config.json: 283kB [00:00, 989MB/s]
+vocab.json: 836kB [00:00, 33.3MB/s]
+tokenizer.json: 2.48MB [00:00, 183MB/s]
+merges.txt: 494kB [00:00, 242MB/s]
+normalizer.json: 52.7kB [00:00, 174MB/s]
+added_tokens.json: 34.6kB [00:00, 189MB/s]
+special_tokens_map.json: 2.19kB [00:00, 28.5MB/s]
+config.json: 1.98kB [00:00, 31.9MB/s]
+model.safetensors: 100%|████████████████████████████████████████████████████████████████████████████████████| 290M/290M [00:03<00:00, 95.1MB/s]
+generation_config.json: 3.81kB [00:00, 34.6MB/s]
+preprocessor_config.json: 100%|███████████████████████████████████████████████████████████████████████████████| 159/159 [00:00<00:00, 3.39MB/s]
+tokenizer_config.json: 100%|███████████████████████████████████████████████████████████████████████████████████| 163/163 [00:00<00:00, 981kB/s]
+config.json: 1.60kB [00:00, 28.1MB/s]
+vocab.json: 100%|█████████████████████████████████████████████████████████████████████████████████████████████| 291/291 [00:00<00:00, 6.78MB/s]
+special_tokens_map.json: 100%|██████████████████████████████████████████████████████████████████████████████| 85.0/85.0 [00:00<00:00, 1.74MB/s]
+model.safetensors: 100%|█████████████████████████████████████████████████████████████████████████████████████| 378M/378M [00:03<00:00, 110MB/s]
+Some weights of Wav2Vec2ForCTC were not initialized from the model checkpoint at facebook/wav2vec2-base-960h and are newly initialized: ['wav2vec2.masked_spec_embed']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+
+📊 Benchmarking on 1 samples...
+Using custom `forced_decoder_ids` from the (generation) config. This is deprecated in favor of the `task` and `language` flags/config options.
+Transcription using a multilingual Whisper will default to language detection followed by transcription instead of translation to English. This might be a breaking change for your use case. If you want to instead always translate your audio to English, make sure to pass `language='en'`. See https://github.com/huggingface/transformers/pull/28687 for more details.
+The attention mask is not set and cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+
+📊 COMPARISON RESULTS:
+--------------------------------------------------
+
+WHISPER:
+  avg_latency: 0.2059
+  model_size_mb: 276.9238
+  parameters: 72593920
+  samples_processed: 1
+
+WAV2VEC2:
+  avg_latency: 0.0669
+  model_size_mb: 360.0934
+  parameters: 94396320
+  samples_processed: 1
+
+==================================================
+✅ Evaluation complete. Choose model for Task 2.
+==================================================
