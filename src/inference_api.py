@@ -6,7 +6,7 @@ Run this to start the API server for your team to use
 from fastapi import FastAPI, UploadFile, File, HTTPException
 import tempfile
 import os
-from baseline_model import BaselineSTTModel
+from src.baseline_model import BaselineSTTModel
 import time
 
 app = FastAPI(title="STT Baseline API")

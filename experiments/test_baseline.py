@@ -22,7 +22,7 @@ if __name__ == "__main__":
             print(f"  {key}: {value}")
     
     # Test with the test audio we created
-    test_audio = "test_audio/test_1.wav"
+    test_audio = "test_audio/addf8-Alaw-GW.wav"
     
     if os.path.exists(test_audio):
         print(f"\n🎤 Testing inference on {test_audio}...")

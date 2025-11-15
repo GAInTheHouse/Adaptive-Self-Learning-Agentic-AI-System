@@ -8,8 +8,8 @@ import os
 # Download a small test audio file or use your own
 # For testing, we'll create a dummy audio or point to existing one
 TEST_AUDIO_FILES = [
-    "test_audio_1.wav",
-    "test_audio_2.wav"
+    "test_audio/addf8-Alaw-GW.wav",
+    # "test_audio_2.wav"
 ]
 
 # If you don't have test files, create a synthetic one:
@@ -37,12 +37,39 @@ if __name__ == "__main__":
     print("=" * 50)
     
     # Create test audio if needed
-    test_files = create_test_audio()
+    # test_files = create_test_audio()
+    test_files = TEST_AUDIO_FILES
     
     evaluator = STTModelEvaluator()
     
     print("\n🔍 Comparing Whisper vs Wav2Vec2...\n")
     results = evaluator.compare_models(test_files)
+
+    print("\n🔎 SAMPLE TRANSCRIPTS:")
+    print("-" * 50)
+
+    test_file = test_files[0]
+    print(f"\nAudio file: {test_file}")
+
+    # Run both models on that audio, print their transcripts
+    whisper_proc, whisper_model = evaluator.load_whisper_base()
+    wav2vec_proc, wav2vec_model = evaluator.load_wav2vec2_base()
+
+    try:
+        whisper_out = evaluator.benchmark_inference(test_file, whisper_proc, whisper_model, "whisper")
+        print("\nWHISPER TRANSCRIPT:")
+        print(whisper_out['transcript'])
+    except Exception as e:
+        print(f"Whisper failed: {e}")
+
+    try:
+        wav2vec_out = evaluator.benchmark_inference(test_file, wav2vec_proc, wav2vec_model, "wav2vec2")
+        print("\nWAV2VEC2 TRANSCRIPT:")
+        print(wav2vec_out['transcript'])
+    except Exception as e:
+        print(f"Wav2Vec2 failed: {e}")
+
+    print("-" * 50)
     
     print("\n📊 COMPARISON RESULTS:")
     print("-" * 50)
