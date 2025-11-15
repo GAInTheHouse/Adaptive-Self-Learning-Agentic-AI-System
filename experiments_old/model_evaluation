@@ -1,0 +1,7 @@
+# Grab a couple of test audio files or use synthetic ones
+from src.model_selector import STTModelEvaluator
+
+evaluator = STTModelEvaluator()
+results = evaluator.compare_models(["test_audio_1.wav", "test_audio_2.wav"])
+print(results)
+# Decision: Choose the faster/cheaper model for deployment

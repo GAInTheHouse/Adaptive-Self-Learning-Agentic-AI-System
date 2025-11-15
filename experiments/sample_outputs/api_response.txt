@@ -1,0 +1,1 @@
+{"transcript":" add the sum to the product of these three.","model":"whisper","version":"baseline-v1","inference_time_seconds":2.5228610038757324}% 
