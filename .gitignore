@@ -16,7 +16,6 @@ data/raw/*
 data/processed/*
 data/augmented/*
 data/evaluation/*
-*.wav
 *.mp3
 *.flac
 !data/*/.gitkeep
