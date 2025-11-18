@@ -7,7 +7,7 @@ Run after deploying baseline to establish performance benchmarks
 import torch
 import time
 import numpy as np
-from baseline_model import BaselineSTTModel
+from src.baseline_model import BaselineSTTModel  # Fixed import
 from typing import List, Dict
 import json
 
