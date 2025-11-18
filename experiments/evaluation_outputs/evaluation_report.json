@@ -1,0 +1,146 @@
+{
+  "summary": {
+    "model": "whisper",
+    "model_info": {
+      "name": "whisper",
+      "parameters": 72593920,
+      "device": "cpu",
+      "trainable_params": 71825920
+    },
+    "evaluation_date": "2025-11-18T12:04:35.094231",
+    "total_datasets": 1,
+    "total_samples_evaluated": 2,
+    "overall_metrics": {
+      "mean_wer": 0.1,
+      "std_wer": 0.0,
+      "mean_cer": 0.022727272727272728,
+      "std_cer": 0.0,
+      "best_wer": 0.1,
+      "worst_wer": 0.1
+    },
+    "per_dataset_metrics": {
+      "test_dataset": {
+        "wer": 0.1,
+        "cer": 0.022727272727272728,
+        "num_samples": 2
+      }
+    }
+  },
+  "detailed_results": {
+    "test_dataset": {
+      "metrics": {
+        "wer": 0.1,
+        "cer": 0.022727272727272728,
+        "num_samples": 2,
+        "num_errors": 0,
+        "inference_stats": {
+          "mean_time_seconds": 0.8749442100524902,
+          "std_time_seconds": 0.5617508888244629,
+          "min_time_seconds": 0.31319332122802734,
+          "max_time_seconds": 1.4366950988769531,
+          "total_time_seconds": 1.7498884201049805
+        }
+      },
+      "references": [
+        "add the sum to the product of these three",
+        "you"
+      ],
+      "hypotheses": [
+        " add the sum to the product of these three.",
+        " you"
+      ],
+      "errors": [],
+      "error_analysis": {
+        "worst_errors": [
+          {
+            "reference": "add the sum to the product of these three",
+            "hypothesis": " add the sum to the product of these three.",
+            "wer": 0.1111111111111111,
+            "cer": 0.024390243902439025,
+            "ref_length": 9,
+            "hyp_length": 9,
+            "length_diff": 0
+          },
+          {
+            "reference": "you",
+            "hypothesis": " you",
+            "wer": 0.0,
+            "cer": 0.0,
+            "ref_length": 1,
+            "hyp_length": 1,
+            "length_diff": 0
+          }
+        ],
+        "error_statistics": {
+          "high_wer_count": 0,
+          "medium_wer_count": 0,
+          "low_wer_count": 2,
+          "avg_ref_length": 5.0,
+          "avg_hyp_length": 5.0,
+          "avg_length_diff": 0.0
+        }
+      }
+    }
+  },
+  "full_evaluation": {
+    "model_info": {
+      "name": "whisper",
+      "parameters": 72593920,
+      "device": "cpu",
+      "trainable_params": 71825920
+    },
+    "evaluation_date": "2025-11-18T12:04:33.299511",
+    "datasets": {
+      "test_dataset": {
+        "metrics": {
+          "wer": 0.1,
+          "cer": 0.022727272727272728,
+          "num_samples": 2,
+          "num_errors": 0,
+          "inference_stats": {
+            "mean_time_seconds": 0.8749442100524902,
+            "std_time_seconds": 0.5617508888244629,
+            "min_time_seconds": 0.31319332122802734,
+            "max_time_seconds": 1.4366950988769531,
+            "total_time_seconds": 1.7498884201049805
+          }
+        },
+        "error_analysis_summary": {
+          "high_wer_count": 0,
+          "medium_wer_count": 0,
+          "low_wer_count": 2,
+          "avg_ref_length": 5.0,
+          "avg_hyp_length": 5.0,
+          "avg_length_diff": 0.0
+        }
+      }
+    },
+    "summary": {
+      "model": "whisper",
+      "model_info": {
+        "name": "whisper",
+        "parameters": 72593920,
+        "device": "cpu",
+        "trainable_params": 71825920
+      },
+      "evaluation_date": "2025-11-18T12:04:35.094231",
+      "total_datasets": 1,
+      "total_samples_evaluated": 2,
+      "overall_metrics": {
+        "mean_wer": 0.1,
+        "std_wer": 0.0,
+        "mean_cer": 0.022727272727272728,
+        "std_cer": 0.0,
+        "best_wer": 0.1,
+        "worst_wer": 0.1
+      },
+      "per_dataset_metrics": {
+        "test_dataset": {
+          "wer": 0.1,
+          "cer": 0.022727272727272728,
+          "num_samples": 2
+        }
+      }
+    }
+  }
+}
