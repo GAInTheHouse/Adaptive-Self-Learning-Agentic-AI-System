@@ -2,8 +2,13 @@
 Task 4: Benchmark the baseline model
 """
 
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+
 from src.benchmark import BaselineBenchmark
 import os
+import json
 
 if __name__ == "__main__":
     print("=" * 50)

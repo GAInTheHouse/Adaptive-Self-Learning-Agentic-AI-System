@@ -1,0 +1,26 @@
+{
+  "model": "whisper",
+  "model_info": {
+    "name": "whisper",
+    "parameters": 72593920,
+    "device": "cpu",
+    "trainable_params": 71825920
+  },
+  "latency_benchmark": {
+    "mean_latency_seconds": 0.7244977951049805,
+    "std_latency_seconds": 0.6088552577854269,
+    "min_latency_seconds": 0.29373908042907715,
+    "max_latency_seconds": 1.5855491161346436,
+    "num_samples": 3
+  },
+  "throughput_benchmark": {
+    "samples_per_second": 2.9664126468001264,
+    "total_duration_seconds": 60.00513792037964,
+    "total_samples": 178
+  },
+  "cost_estimate": {
+    "inferences_per_month": 1800000.0,
+    "estimated_cost_usd": 180.0,
+    "cost_per_hour_transcribed": 1.8
+  }
+}
