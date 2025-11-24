@@ -1,0 +1,3 @@
+{"timestamp": "2025-11-23T15:55:13.115454", "audio_path": "audio/user_recording_1.wav", "inference_time": 0.5, "model_confidence": 0.85, "error_detected": true, "corrected": false, "metadata": {"case_id": "7375e53e0f08", "error_score": 0.7}}
+{"timestamp": "2025-11-23T15:55:13.117087", "audio_path": "audio/user_recording_2.wav", "inference_time": 0.5, "model_confidence": 0.85, "error_detected": true, "corrected": false, "metadata": {"case_id": "748889eb2474", "error_score": 0.7}}
+{"timestamp": "2025-11-23T15:55:13.118515", "audio_path": "audio/user_recording_3.wav", "inference_time": 0.5, "model_confidence": 0.85, "error_detected": true, "corrected": false, "metadata": {"case_id": "c73c35991f70", "error_score": 0.7}}
