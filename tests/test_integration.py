@@ -99,8 +99,10 @@ class TestCompleteWorkflow:
                 case_id = self.data_system.record_failed_transcription(
                     audio_path=f"test_audio/{audio_file}",
                     original_transcript=simulated_transcript,
+                    corrected_transcript=None,
                     error_types=list(summary['error_types'].keys()),
-                    error_score=summary['error_score']
+                    error_score=summary['error_score'],
+                    inference_time=0.5
                 )
                 
                 assert case_id is not None
@@ -113,7 +115,7 @@ class TestCompleteWorkflow:
         """Test agent learning from feedback"""
         # Record multiple feedback entries
         for i in range(5):
-            self.agent.record_user_feedback(
+            self.agent.submit_feedback(
                 transcript_id=f"test_{i}",
                 user_feedback=f"Feedback {i}",
                 is_correct=(i % 2 == 0),
@@ -134,14 +136,16 @@ class TestCompleteWorkflow:
                 original_transcript=f"TEST {i}",
                 corrected_transcript=f"Test {i}",
                 error_types=["all_caps"],
-                error_score=0.8
+                error_score=0.8,
+                inference_time=0.5
             )
         
         # Track performance
         self.data_system.record_training_performance(
             model_version="test_v1",
             wer=0.12,
-            cer=0.06
+            cer=0.06,
+            training_metadata={'model_name': 'test_model', 'training_data_size': 100}
         )
         
         # Generate report
@@ -161,7 +165,8 @@ class TestCompleteWorkflow:
                 original_transcript=f"Original {i}",
                 corrected_transcript=f"Corrected {i}",
                 error_types=["all_caps"],
-                error_score=0.6 + (i % 3) * 0.1
+                error_score=0.6 + (i % 3) * 0.1,
+                inference_time=0.5 + (i % 5) * 0.1
             )
         
         # Prepare dataset
@@ -209,8 +214,10 @@ class TestAgentDataIntegration:
                 self.data_system.record_failed_transcription(
                     audio_path=f"test_{i}.wav",
                     original_transcript=f"TEST CASE {i}",
+                    corrected_transcript=None,
                     error_types=[e.error_type for e in errors],
-                    error_score=0.8
+                    error_score=0.8,
+                    inference_time=0.5
                 )
         
         # Check statistics
@@ -225,8 +232,10 @@ class TestAgentDataIntegration:
             case_id = self.data_system.record_failed_transcription(
                 audio_path=f"test_{i}.wav",
                 original_transcript=f"Original {i}",
+                corrected_transcript=None,
                 error_types=["all_caps"],
-                error_score=0.8
+                error_score=0.8,
+                inference_time=0.5
             )
             
             # Add correction for half of them
