@@ -110,7 +110,7 @@ Adaptive-Self-Learning-Agentic-AI-System/
 ├── SETUP_INSTRUCTIONS.md         # Detailed setup guide
 ├── WEEK1_DELIVERABLES_REPORT.md  # Week 1 completion report
 ├── WEEK2_DELIVERABLES_REPORT.md  # Week 2 completion report
-└── DATA_MANAGEMENT_README.md     # Data management overview
+└── docs/DATA_MANAGEMENT_SYSTEM.md # Data management guide
 ```
 
 ## 🚀 Quick Start
@@ -757,7 +757,8 @@ python scripts/monitor_gcp_costs.py
 ## 📚 Documentation
 
 - **[SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md)** - Detailed setup guide
-- **[DATA_MANAGEMENT_README.md](DATA_MANAGEMENT_README.md)** - Data management overview
+- **[docs/DATA_MANAGEMENT_SYSTEM.md](docs/DATA_MANAGEMENT_SYSTEM.md)** - Complete data management guide
+- **[docs/QUICK_START_DATA_MANAGEMENT.md](docs/QUICK_START_DATA_MANAGEMENT.md)** - Quick start for data management
 - **[docs/DATA_MANAGEMENT_SYSTEM.md](docs/DATA_MANAGEMENT_SYSTEM.md)** - Complete data management API
 - **[docs/QUICK_START_DATA_MANAGEMENT.md](docs/QUICK_START_DATA_MANAGEMENT.md)** - Quick start for data management
 - **[docs/GCP_SETUP_GUIDE.md](docs/GCP_SETUP_GUIDE.md)** - GCP setup instructions
