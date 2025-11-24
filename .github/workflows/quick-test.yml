@@ -1,0 +1,50 @@
+name: Quick Tests
+
+# Run quick tests on every push to any branch
+on:
+  push:
+    branches: [ '*' ]
+
+jobs:
+  quick-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov
+        # Install only essential dependencies for quick tests
+        pip install torch --index-url https://download.pytorch.org/whl/cpu
+        pip install transformers jiwer librosa soundfile
+    
+    - name: Run quick unit tests
+      run: |
+        pytest tests/test_metrics.py tests/test_error_detector.py -v --tb=short -m "not slow"
+    
+    - name: Test result
+      if: always()
+      run: |
+        echo "## Quick Test Results" >> $GITHUB_STEP_SUMMARY
+        if [ $? -eq 0 ]; then
+          echo "✅ Quick tests passed!" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Some tests failed" >> $GITHUB_STEP_SUMMARY
+        fi
+
