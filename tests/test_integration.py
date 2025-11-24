@@ -152,7 +152,7 @@ class TestCompleteWorkflow:
         report = self.data_system.generate_comprehensive_report()
         
         assert 'system_statistics' in report
-        assert 'performance_metrics' in report
+        assert 'performance_report' in report
         assert 'data_quality' in report
         assert 'recommendations' in report
     
