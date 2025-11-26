@@ -48,7 +48,7 @@ class ErrorDetector:
         self.min_length_ratio = min_length_ratio
         
         # Common error patterns
-        self.repeated_chars_pattern = re.compile(r'(.)\1{4,}')  # 5+ repeated chars
+        self.repeated_chars_pattern = re.compile(r'(.)\1{3,}')  # 4+ repeated chars
         self.nonsense_words_pattern = re.compile(r'\b[a-z]{1,2}\b')  # Very short words
         self.special_chars_pattern = re.compile(r'[^\w\s\.,!?;:\-\'"]')
         
@@ -88,16 +88,26 @@ class ErrorDetector:
         """
         errors = []
         
-        # 1. Empty or very short transcript
-        if not transcript or len(transcript.strip()) < 3:
+        # 1. Empty transcript
+        if not transcript or len(transcript.strip()) == 0:
             errors.append(ErrorSignal(
                 error_type="empty_transcript",
                 confidence=0.9,
-                description="Transcript is empty or too short",
+                description="Transcript is empty",
+                suggested_correction=None
+            ))
+            return errors  # No need to check further
+        
+        # 2. Too short transcript (standalone check)
+        if len(transcript.strip()) < 3:
+            errors.append(ErrorSignal(
+                error_type="too_short",
+                confidence=0.8,
+                description="Transcript is too short",
                 suggested_correction=None
             ))
         
-        # 2. Length anomaly detection
+        # 3. Length anomaly detection (based on audio length)
         if audio_length_seconds:
             expected_length = audio_length_seconds * 2.5  # ~2.5 chars per second average
             actual_length = len(transcript)
@@ -105,20 +115,20 @@ class ErrorDetector:
             
             if ratio > self.max_length_ratio:
                 errors.append(ErrorSignal(
-                    error_type="too_long",
+                    error_type="length_anomaly_long",
                     confidence=0.7,
                     description=f"Transcript is {ratio:.1f}x longer than expected",
                     suggested_correction=None
                 ))
             elif ratio < self.min_length_ratio:
                 errors.append(ErrorSignal(
-                    error_type="too_short",
+                    error_type="length_anomaly_short",
                     confidence=0.7,
                     description=f"Transcript is {ratio:.1f}x shorter than expected",
                     suggested_correction=None
                 ))
         
-        # 3. Repeated characters (common STT error)
+        # 4. Repeated characters (common STT error)
         repeated_matches = self.repeated_chars_pattern.finditer(transcript)
         for match in repeated_matches:
             errors.append(ErrorSignal(
@@ -129,7 +139,7 @@ class ErrorDetector:
                 suggested_correction=transcript[:match.start()] + match.group(1) + transcript[match.end():]
             ))
         
-        # 4. Special characters (likely transcription errors)
+        # 5. Special characters (likely transcription errors)
         special_matches = self.special_chars_pattern.finditer(transcript)
         for match in special_matches:
             errors.append(ErrorSignal(
@@ -140,7 +150,7 @@ class ErrorDetector:
                 suggested_correction=None
             ))
         
-        # 5. Low model confidence
+        # 6. Low model confidence
         if model_confidence is not None and model_confidence < self.min_confidence_threshold:
             errors.append(ErrorSignal(
                 error_type="low_confidence",
@@ -149,7 +159,7 @@ class ErrorDetector:
                 suggested_correction=None
             ))
         
-        # 6. Unusual word patterns (too many very short words)
+        # 7. Unusual word patterns (too many very short words)
         words = transcript.lower().split()
         if len(words) > 0:
             short_words_ratio = sum(1 for w in words if len(w) <= 2) / len(words)
@@ -161,7 +171,7 @@ class ErrorDetector:
                     suggested_correction=None
                 ))
         
-        # 7. All caps (unusual for normal speech)
+        # 8. All caps (unusual for normal speech)
         if transcript.isupper() and len(transcript) > 10:
             errors.append(ErrorSignal(
                 error_type="all_caps",
@@ -170,7 +180,7 @@ class ErrorDetector:
                 suggested_correction=transcript.capitalize()
             ))
         
-        # 8. No punctuation or sentence structure
+        # 9. No punctuation or sentence structure
         if len(transcript) > 50 and not re.search(r'[.!?]', transcript):
             errors.append(ErrorSignal(
                 error_type="no_punctuation",

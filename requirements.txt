@@ -42,3 +42,5 @@ fastapi>=0.104.0
 uvicorn>=0.24.0
 --only-binary=:all: numba
 python-multipart>=0.0.5
+
+importlib-metadata

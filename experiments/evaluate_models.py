@@ -2,6 +2,13 @@
 Task 1: Compare Whisper vs Wav2Vec2
 Run this script to decide which model to deploy
 """
+
+import sys
+from pathlib import Path
+
+# Add project root to Python path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from src.model_selector import STTModelEvaluator
 import os
 

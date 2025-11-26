@@ -1,0 +1,15 @@
+{"timestamp": "2025-11-23T15:49:45.871088", "wer": 0.15, "cer": 0.08, "error_rate": 0.2, "correction_rate": 0.6, "inference_time": 0.5, "metadata": {}}
+{"timestamp": "2025-11-23T15:49:45.871231", "wer": 0.13999999999999999, "cer": 0.075, "error_rate": 0.18000000000000002, "correction_rate": 0.65, "inference_time": 0.52, "metadata": {}}
+{"timestamp": "2025-11-23T15:49:45.871340", "wer": 0.13, "cer": 0.07, "error_rate": 0.16, "correction_rate": 0.7, "inference_time": 0.54, "metadata": {}}
+{"timestamp": "2025-11-23T15:49:45.871427", "wer": 0.12, "cer": 0.065, "error_rate": 0.14, "correction_rate": 0.75, "inference_time": 0.56, "metadata": {}}
+{"timestamp": "2025-11-23T15:49:45.871491", "wer": 0.10999999999999999, "cer": 0.06, "error_rate": 0.12000000000000001, "correction_rate": 0.8, "inference_time": 0.58, "metadata": {}}
+{"timestamp": "2025-11-23T15:50:55.720936", "wer": 0.15, "cer": 0.08, "error_rate": 0.2, "correction_rate": 0.6, "inference_time": 0.5, "metadata": {}}
+{"timestamp": "2025-11-23T15:50:55.721004", "wer": 0.13999999999999999, "cer": 0.075, "error_rate": 0.18000000000000002, "correction_rate": 0.65, "inference_time": 0.52, "metadata": {}}
+{"timestamp": "2025-11-23T15:50:55.721050", "wer": 0.13, "cer": 0.07, "error_rate": 0.16, "correction_rate": 0.7, "inference_time": 0.54, "metadata": {}}
+{"timestamp": "2025-11-23T15:50:55.721095", "wer": 0.12, "cer": 0.065, "error_rate": 0.14, "correction_rate": 0.75, "inference_time": 0.56, "metadata": {}}
+{"timestamp": "2025-11-23T15:50:55.721134", "wer": 0.10999999999999999, "cer": 0.06, "error_rate": 0.12000000000000001, "correction_rate": 0.8, "inference_time": 0.58, "metadata": {}}
+{"timestamp": "2025-11-23T15:51:52.730216", "wer": 0.15, "cer": 0.08, "error_rate": 0.2, "correction_rate": 0.6, "inference_time": 0.5, "metadata": {}}
+{"timestamp": "2025-11-23T15:51:52.730268", "wer": 0.13999999999999999, "cer": 0.075, "error_rate": 0.18000000000000002, "correction_rate": 0.65, "inference_time": 0.52, "metadata": {}}
+{"timestamp": "2025-11-23T15:51:52.730307", "wer": 0.13, "cer": 0.07, "error_rate": 0.16, "correction_rate": 0.7, "inference_time": 0.54, "metadata": {}}
+{"timestamp": "2025-11-23T15:51:52.730341", "wer": 0.12, "cer": 0.065, "error_rate": 0.14, "correction_rate": 0.75, "inference_time": 0.56, "metadata": {}}
+{"timestamp": "2025-11-23T15:51:52.730375", "wer": 0.10999999999999999, "cer": 0.06, "error_rate": 0.12000000000000001, "correction_rate": 0.8, "inference_time": 0.58, "metadata": {}}

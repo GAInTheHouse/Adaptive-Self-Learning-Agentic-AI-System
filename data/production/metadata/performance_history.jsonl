@@ -1,0 +1,3 @@
+{"timestamp": "2025-11-23T15:56:01.376407", "wer": 0.15, "cer": 0.08, "error_rate": null, "correction_rate": null, "inference_time": null, "metadata": {"model_version": "whisper_base_v1"}}
+{"timestamp": "2025-11-23T15:56:01.379185", "wer": 0.13, "cer": 0.07, "error_rate": null, "correction_rate": null, "inference_time": null, "metadata": {"model_version": "whisper_base_v2"}}
+{"timestamp": "2025-11-23T15:56:01.380469", "wer": 0.11, "cer": 0.06, "error_rate": null, "correction_rate": null, "inference_time": null, "metadata": {"model_version": "whisper_base_v3"}}
