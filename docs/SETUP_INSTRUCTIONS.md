@@ -151,7 +151,7 @@ data_system = IntegratedDataManagementSystem(
 # 2. Test transcription
 print("\nTranscribing test audio...")
 result = agent.transcribe_with_agent(
-    audio_path="data/test_audio/test_1.wav",
+    audio_path="test_audio/test_1.wav",
     enable_auto_correction=True
 )
 
@@ -163,7 +163,7 @@ print(f"   Error types: {list(result['error_detection']['error_types'].keys())}"
 # 3. Record if errors found
 if result['error_detection']['has_errors']:
     case_id = data_system.record_failed_transcription(
-        audio_path="data/test_audio/test_1.wav",
+        audio_path="test_audio/test_1.wav",
         original_transcript=result['original_transcript'],
         error_types=list(result['error_detection']['error_types'].keys()),
         error_score=result['error_detection']['error_score']
@@ -199,7 +199,7 @@ Then test with:
 ```bash
 # Test transcription
 curl -X POST "http://localhost:8000/agent/transcribe" \
-  -F "file=@data/test_audio/test_1.wav"
+  -F "file=@test_audio/test_1.wav"
 
 # Check health
 curl "http://localhost:8000/health"
@@ -229,7 +229,7 @@ print(f"Device: {info['device']}")
 print(f"Parameters: {info['parameters']:,}")
 
 # Test transcription
-result = model.transcribe("data/test_audio/test_1.wav")
+result = model.transcribe("test_audio/test_1.wav")
 print(f"Transcript: {result['transcript']}")
 ```
 
@@ -353,7 +353,7 @@ uvicorn src.agent_api:app --reload --port 8000
 ```bash
 # Transcribe with agent
 curl -X POST "http://localhost:8000/agent/transcribe?auto_correction=true" \
-  -F "file=@data/test_audio/test_1.wav" | jq
+  -F "file=@test_audio/test_1.wav" | jq
 
 # Submit feedback
 curl -X POST "http://localhost:8000/agent/feedback" \
