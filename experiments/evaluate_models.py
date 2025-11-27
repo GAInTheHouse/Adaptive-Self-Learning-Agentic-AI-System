@@ -15,7 +15,7 @@ import os
 # Download a small test audio file or use your own
 # For testing, we'll create a dummy audio or point to existing one
 TEST_AUDIO_FILES = [
-    "test_audio/addf8-Alaw-GW.wav",
+    "data/test_audio/addf8-Alaw-GW.wav",
     # "test_audio_2.wav"
 ]
 
@@ -34,9 +34,9 @@ def create_test_audio():
     audio = np.sin(2 * np.pi * frequency * t) * 0.3
     
     os.makedirs("test_audio", exist_ok=True)
-    wavfile.write("test_audio/test_1.wav", sr, (audio * 32767).astype(np.int16))
-    print("✅ Created test_audio/test_1.wav")
-    return ["test_audio/test_1.wav"]
+    wavfile.write("data/test_audio/test_1.wav", sr, (audio * 32767).astype(np.int16))
+    print("✅ Created data/test_audio/test_1.wav")
+    return ["data/test_audio/test_1.wav"]
 
 if __name__ == "__main__":
     print("=" * 50)

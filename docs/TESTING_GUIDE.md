@@ -313,7 +313,7 @@ def test_end_to_end_workflow():
 ```python
 def test_agent_transcribe_endpoint():
     """Test /agent/transcribe endpoint"""
-    with open("test_audio/test_1.wav", "rb") as f:
+    with open("data/test_audio/test_1.wav", "rb") as f:
         files = {"file": f}
         response = requests.post(
             "http://localhost:8000/agent/transcribe",

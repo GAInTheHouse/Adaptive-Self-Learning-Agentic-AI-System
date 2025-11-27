@@ -35,7 +35,7 @@ def demo_baseline_model():
     print(f"✅ Trainable params: {info['trainable_params']:,}")
     
     # Test transcription
-    test_audio = "test_audio/test_1.wav"
+    test_audio = "data/test_audio/test_1.wav"
     if Path(test_audio).exists():
         print(f"\n🎤 Transcribing: {test_audio}")
         result = model.transcribe(test_audio)
@@ -58,7 +58,7 @@ def demo_agent_system(baseline_model):
     )
     
     # Create test case with known errors
-    test_audio = "test_audio/test_1.wav"
+    test_audio = "data/test_audio/test_1.wav"
     
     if Path(test_audio).exists():
         print(f"\n🎤 Transcribing with agent: {test_audio}")
@@ -113,7 +113,7 @@ def demo_data_management(agent_result):
     if agent_result and agent_result['error_detection']['has_errors']:
         print("\n📝 Recording failed transcription...")
         case_id = system.record_failed_transcription(
-            audio_path="test_audio/test_1.wav",
+            audio_path="data/test_audio/test_1.wav",
             original_transcript=agent_result['original_transcript'],
             corrected_transcript=None,  # Will add later
             error_types=list(agent_result['error_detection']['error_types'].keys()),
@@ -256,7 +256,7 @@ def demo_api_server():
     print("  GET    /health                  - Health check")
     print("\nExample API calls:")
     print('  curl -X POST "http://localhost:8000/agent/transcribe" \\')
-    print('    -F "file=@test_audio/test_1.wav"')
+    print('    -F "file=@data/test_audio/test_1.wav"')
     print('\n  curl "http://localhost:8000/agent/stats"')
 
 def demo_gcp_integration():

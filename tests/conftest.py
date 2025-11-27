@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 @pytest.fixture(scope="session")
 def test_audio_path():
     """Provide path to test audio file"""
-    return "test_audio/test_1.wav"
+    return "data/test_audio/test_1.wav"
 
 
 @pytest.fixture(scope="session")

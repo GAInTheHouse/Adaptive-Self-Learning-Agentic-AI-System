@@ -469,8 +469,8 @@ def main():
         logger.warning("No evaluation datasets found. Using test audio for demonstration...")
         # Fallback: evaluate on test audio files
         test_audio_files = [
-            "test_audio/addf8-Alaw-GW.wav",
-            "test_audio/test_1.wav"
+            "data/test_audio/addf8-Alaw-GW.wav",
+            "data/data/test_audio/test_1.wav"
         ]
         
         # Create a simple evaluation with test files

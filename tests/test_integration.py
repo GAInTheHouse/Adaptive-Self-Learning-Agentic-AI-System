@@ -33,11 +33,11 @@ class TestCompleteWorkflow:
         if Path(self.test_dir).exists():
             shutil.rmtree(self.test_dir)
     
-    @pytest.mark.skipif(not Path("test_audio/test_1.wav").exists(), 
+    @pytest.mark.skipif(not Path("data/test_audio/test_1.wav").exists(), 
                        reason="Test audio file not available")
     def test_end_to_end_workflow(self):
         """Test complete workflow: transcribe -> detect errors -> record -> correct"""
-        audio_path = "test_audio/test_1.wav"
+        audio_path = "data/test_audio/test_1.wav"
         
         # Step 1: Transcribe with agent
         result = self.agent.transcribe_with_agent(

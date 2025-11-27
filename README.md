@@ -152,7 +152,7 @@ data_system = IntegratedDataManagementSystem(base_dir="data/production")
 
 # 2. Transcribe with agent
 result = agent.transcribe_with_agent(
-    audio_path="test_audio/test_1.wav",
+    audio_path="data/test_audio/test_1.wav",
     enable_auto_correction=True
 )
 
@@ -163,7 +163,7 @@ print(f"Error types: {result['error_detection']['error_types']}")
 # 3. Record failures for learning
 if result['error_detection']['has_errors']:
     case_id = data_system.record_failed_transcription(
-        audio_path="test_audio/test_1.wav",
+        audio_path="data/test_audio/test_1.wav",
         original_transcript=result['original_transcript'],
         corrected_transcript=None,  # Add correction later
         error_types=list(result['error_detection']['error_types'].keys()),
@@ -298,7 +298,7 @@ uvicorn src.inference_api:app --reload --port 8000
 
 # Test with curl
 curl -X POST "http://localhost:8000/transcribe" \
-  -F "file=@test_audio/test_1.wav"
+  -F "file=@data/test_audio/test_1.wav"
 
 # Get model info
 curl "http://localhost:8000/model-info"
@@ -317,7 +317,7 @@ uvicorn src.agent_api:app --reload --port 8000
 
 # Transcribe with agent
 curl -X POST "http://localhost:8000/agent/transcribe?auto_correction=true" \
-  -F "file=@test_audio/test_1.wav"
+  -F "file=@data/test_audio/test_1.wav"
 
 # Submit feedback
 curl -X POST "http://localhost:8000/agent/feedback" \
@@ -337,7 +337,7 @@ curl "http://localhost:8000/agent/learning-data"
 
 # Baseline endpoints still work
 curl -X POST "http://localhost:8000/transcribe" \
-  -F "file=@test_audio/test_1.wav"
+  -F "file=@data/test_audio/test_1.wav"
 ```
 
 ### 3. Evaluation & Benchmarking
