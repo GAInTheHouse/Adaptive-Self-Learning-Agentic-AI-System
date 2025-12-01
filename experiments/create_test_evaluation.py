@@ -16,12 +16,12 @@ def create_test_dataset():
     # Ground truth transcripts (from known test files)
     test_data = [
         {
-            "audio_path": "test_audio/addf8-Alaw-GW.wav",
+            "audio_path": "data/test_audio/addf8-Alaw-GW.wav",
             "reference": "add the sum to the product of these three",
             "id": "test_001"
         },
         {
-            "audio_path": "test_audio/test_1.wav", 
+            "audio_path": "data/test_audio/test_1.wav", 
             "reference": "you",  # Simple test audio
             "id": "test_002"
         }

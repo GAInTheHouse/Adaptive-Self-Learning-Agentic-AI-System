@@ -14,7 +14,7 @@ import time
 
 
 BASE_URL = "http://localhost:8000"
-TEST_AUDIO_PATH = "test_audio/test_1.wav"
+TEST_AUDIO_PATH = "data/test_audio/test_1.wav"
 
 
 class TestBaselineAPI:

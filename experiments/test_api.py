@@ -27,7 +27,7 @@ if __name__ == "__main__":
     
     # Test 3: Transcription
     print("\n🎤 Testing transcription endpoint...")
-    test_audio_path = "test_audio/test_1.wav"
+    test_audio_path = "data/test_audio/test_1.wav"
     
     with open(test_audio_path, "rb") as f:
         files = {"file": f}

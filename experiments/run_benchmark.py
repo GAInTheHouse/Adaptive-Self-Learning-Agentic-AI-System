@@ -16,7 +16,7 @@ if __name__ == "__main__":
     print("=" * 50)
     
     # Use test audio
-    test_audio_files = ["test_audio/test_1.wav"]
+    test_audio_files = ["data/test_audio/test_1.wav"]
     
     if not all(os.path.exists(f) for f in test_audio_files):
         print("⚠️  Test audio files not found. Run Task 1 first.")

@@ -53,13 +53,13 @@ class TestBaselineBenchmark:
         assert cost_200['inferences_per_month'] > cost_100['inferences_per_month']
         assert cost_200['estimated_cost_usd'] > cost_100['estimated_cost_usd']
     
-    @pytest.mark.skipif(not Path("test_audio/test_1.wav").exists(), 
+    @pytest.mark.skipif(not Path("data/test_audio/test_1.wav").exists(), 
                        reason="Test audio file not available")
     def test_benchmark_latency_structure(self):
         """Test latency benchmark returns correct structure"""
         benchmark = BaselineBenchmark(model_name="whisper")
         
-        audio_paths = ["test_audio/test_1.wav"]
+        audio_paths = ["data/test_audio/test_1.wav"]
         latency = benchmark.benchmark_latency(audio_paths, num_runs=2)
         
         assert 'mean_latency_seconds' in latency
@@ -73,13 +73,13 @@ class TestBaselineBenchmark:
         assert latency['max_latency_seconds'] >= latency['min_latency_seconds']
         assert latency['num_samples'] == 2  # 1 file * 2 runs
     
-    @pytest.mark.skipif(not Path("test_audio/test_1.wav").exists(), 
+    @pytest.mark.skipif(not Path("data/test_audio/test_1.wav").exists(), 
                        reason="Test audio file not available")
     def test_benchmark_throughput_structure(self):
         """Test throughput benchmark returns correct structure"""
         benchmark = BaselineBenchmark(model_name="whisper")
         
-        audio_paths = ["test_audio/test_1.wav"]
+        audio_paths = ["data/test_audio/test_1.wav"]
         # Use very short duration for testing
         throughput = benchmark.benchmark_throughput(audio_paths, duration_seconds=5)
         
@@ -91,13 +91,13 @@ class TestBaselineBenchmark:
         assert throughput['total_samples'] > 0
         assert throughput['total_duration_seconds'] > 0
     
-    @pytest.mark.skipif(not Path("test_audio/test_1.wav").exists(), 
+    @pytest.mark.skipif(not Path("data/test_audio/test_1.wav").exists(), 
                        reason="Test audio file not available")
     def test_generate_report_structure(self):
         """Test complete report generation"""
         benchmark = BaselineBenchmark(model_name="whisper")
         
-        audio_paths = ["test_audio/test_1.wav"]
+        audio_paths = ["data/test_audio/test_1.wav"]
         report = benchmark.generate_report(audio_paths)
         
         assert 'model' in report
@@ -111,13 +111,13 @@ class TestBaselineBenchmark:
         assert 'parameters' in report['model_info']
         assert 'device' in report['model_info']
     
-    @pytest.mark.skipif(not Path("test_audio/test_1.wav").exists(), 
+    @pytest.mark.skipif(not Path("data/test_audio/test_1.wav").exists(), 
                        reason="Test audio file not available")
     def test_save_report(self, tmp_path):
         """Test report saving"""
         benchmark = BaselineBenchmark(model_name="whisper")
         
-        audio_paths = ["test_audio/test_1.wav"]
+        audio_paths = ["data/test_audio/test_1.wav"]
         report = benchmark.generate_report(audio_paths)
         
         output_path = tmp_path / "benchmark_report.json"

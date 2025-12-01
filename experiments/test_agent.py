@@ -30,7 +30,7 @@ def test_agent_basic():
     agent = STTAgent(baseline_model=baseline_model)
     
     # Test with sample audio
-    test_audio_path = "test_audio/test_1.wav"
+    test_audio_path = "data/test_audio/test_1.wav"
     
     if not Path(test_audio_path).exists():
         print(f"⚠️  Test audio not found: {test_audio_path}")
