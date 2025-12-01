@@ -5,6 +5,7 @@ torchaudio>=2.0.0
 transformers>=4.35.0
 accelerate>=0.24.0
 datasets>=2.14.0
+bitsandbytes>=0.41.0  # For quantization (optional, helps with memory)
 
 # Audio processing
 librosa>=0.10.0

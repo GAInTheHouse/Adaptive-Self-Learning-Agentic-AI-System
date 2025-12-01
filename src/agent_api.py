@@ -16,9 +16,14 @@ from src.agent import STTAgent
 
 app = FastAPI(title="STT Agent API", version="2.0.0")
 
-# Initialize baseline model and agent
+# Initialize baseline model and agent with Gemma LLM support
 baseline_model = BaselineSTTModel(model_name="whisper")
-agent = STTAgent(baseline_model=baseline_model)
+# Initialize agent with LLM correction enabled (will fallback to rule-based if LLM unavailable)
+agent = STTAgent(
+    baseline_model=baseline_model,
+    use_llm_correction=True,  # Enable Gemma LLM for intelligent correction
+    use_quantization=False  # Set to True to save memory (requires bitsandbytes)
+)
 
 
 class FeedbackRequest(BaseModel):
@@ -38,6 +43,16 @@ async def startup():
     print(f"✅ Agent initialized with error detection and self-learning")
     print(f"   - Error threshold: {agent_stats['error_detection']['threshold']}")
     print(f"   - Total errors learned: {agent_stats['learning']['total_errors_learned']}")
+    
+    # Show LLM status
+    if 'llm_info' in agent_stats:
+        llm_info = agent_stats['llm_info']
+        if llm_info.get('status') == 'loaded':
+            print(f"✅ Gemma LLM ({llm_info.get('model', 'unknown')}) loaded on {llm_info.get('device', 'unknown')}")
+        else:
+            print(f"⚠️  Gemma LLM not available, using rule-based correction only")
+    else:
+        print(f"⚠️  Gemma LLM not initialized, using rule-based correction only")
 
 
 @app.post("/transcribe")
@@ -177,11 +192,15 @@ async def get_learning_data():
 @app.get("/health")
 async def health():
     """Health check endpoint"""
+    agent_stats = agent.get_agent_stats()
+    llm_available = agent_stats.get('llm_info', {}).get('status') == 'loaded' if 'llm_info' in agent_stats else False
+    
     return {
         "status": "healthy",
         "model": baseline_model.model_name,
         "device": baseline_model.device,
-        "agent_enabled": True
+        "agent_enabled": True,
+        "llm_enabled": llm_available
     }
 
 
