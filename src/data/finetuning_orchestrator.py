@@ -16,6 +16,7 @@ from .finetuning_pipeline import FinetuningDatasetPipeline
 from .version_control import DataVersionControl
 from .metadata_tracker import MetadataTracker
 from ..utils.gcs_utils import GCSManager
+from .wandb_tracker import WandbTracker
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,6 +43,11 @@ class FinetuningConfig:
     
     # Auto-approval
     auto_approve_finetuning: bool = False  # Require manual approval by default
+    
+    # W&B tracking
+    use_wandb: bool = True  # Enable Weights & Biases tracking
+    wandb_project: str = "stt-finetuning"  # W&B project name
+    wandb_entity: Optional[str] = None  # W&B entity (username/team)
     
     def to_dict(self) -> Dict:
         """Convert to dictionary."""
@@ -144,9 +150,25 @@ class FinetuningOrchestrator:
         # Callbacks for custom training integration
         self.training_callback: Optional[Callable] = None
         
+        # W&B tracking
+        self.wandb_tracker = None
+        if self.config.use_wandb:
+            try:
+                self.wandb_tracker = WandbTracker(
+                    project_name=self.config.wandb_project,
+                    entity=self.config.wandb_entity,
+                    enabled=True,
+                    config=self.config.to_dict()
+                )
+                logger.info(f"W&B tracking enabled for project: {self.config.wandb_project}")
+            except Exception as e:
+                logger.warning(f"Failed to initialize W&B: {e}")
+                self.config.use_wandb = False
+        
         logger.info("Fine-tuning Orchestrator initialized")
         logger.info(f"  Trigger threshold: {self.config.min_error_cases} error cases")
         logger.info(f"  Auto-approve: {self.config.auto_approve_finetuning}")
+        logger.info(f"  W&B tracking: {self.config.use_wandb}")
     
     def _load_jobs(self):
         """Load job history."""
@@ -374,6 +396,34 @@ class FinetuningOrchestrator:
             metadata={'job_id': job.job_id}
         )
         
+        # Start W&B run
+        if self.wandb_tracker:
+            self.wandb_tracker.start_run(
+                run_name=f"finetuning_{job.job_id}",
+                job_id=job.job_id,
+                tags=['finetuning', 'automated'],
+                config=self.config.to_dict()
+            )
+            
+            # Log dataset info if available
+            job_info = self.get_job_info(job.job_id)
+            if job_info and 'dataset_info' in job_info:
+                dataset_info = job_info['dataset_info']
+                self.wandb_tracker.log_dataset_info(
+                    dataset_id=job.dataset_id,
+                    split_sizes=dataset_info.get('split_sizes', {}),
+                    error_type_distribution=dataset_info.get('error_type_distribution', {})
+                )
+            
+            # Log system metrics
+            stats = self.data_manager.get_statistics()
+            self.wandb_tracker.log_system_metrics(
+                error_cases=stats['total_failed_cases'],
+                corrected_cases=stats['corrected_cases'],
+                correction_rate=stats['correction_rate'],
+                models_deployed=len(self.jobs)
+            )
+        
         logger.info(f"🚀 Fine-tuning triggered! Job ID: {job.job_id}")
         
         return job
@@ -472,6 +522,27 @@ class FinetuningOrchestrator:
                 },
                 performance_metrics=training_metrics
             )
+            
+            # Log training completion to W&B
+            if self.wandb_tracker and training_metrics:
+                self.wandb_tracker.log_metrics({
+                    'training/final_loss': training_metrics.get('loss', 0),
+                    'training/final_wer': training_metrics.get('wer', 0),
+                    'training/final_cer': training_metrics.get('cer', 0),
+                    'training/epochs': training_metrics.get('epochs', 0),
+                    'training/duration': training_metrics.get('duration', 0)
+                })
+                
+                # Log model artifact
+                self.wandb_tracker.log_model_artifact(
+                    model_path=model_path,
+                    model_name=f"model_{job_id}",
+                    metadata={
+                        'job_id': job_id,
+                        'dataset_id': job.dataset_id,
+                        'training_metrics': training_metrics
+                    }
+                )
             
             logger.info(f"✅ Training completed for job {job_id}")
             logger.info(f"   Model: {model_path}")

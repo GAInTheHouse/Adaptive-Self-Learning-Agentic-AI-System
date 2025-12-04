@@ -29,6 +29,9 @@ scikit-learn>=1.3.0
 matplotlib>=3.7.0
 seaborn>=0.12.0
 
+# Experiment Tracking
+wandb>=0.16.0
+
 # Utilities
 tqdm>=4.65.0
 pyyaml>=6.0
