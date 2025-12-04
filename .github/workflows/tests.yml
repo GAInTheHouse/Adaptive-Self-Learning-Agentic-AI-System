@@ -46,6 +46,11 @@ jobs:
         pytest tests/test_metrics.py -v --tb=short
         pytest tests/test_error_detector.py -v --tb=short
         pytest tests/test_benchmark.py -v --tb=short
+        pytest tests/test_finetuning_orchestrator.py -v --tb=short
+        pytest tests/test_model_validator.py -v --tb=short
+        pytest tests/test_model_deployer.py -v --tb=short
+        pytest tests/test_regression_tester.py -v --tb=short
+        pytest tests/test_finetuning_coordinator.py -v --tb=short
     
     - name: Run integration tests
       run: |
@@ -74,6 +79,7 @@ jobs:
       run: |
         echo "## Test Results" >> $GITHUB_STEP_SUMMARY
         echo "✅ Unit tests completed" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Fine-tuning orchestration tests completed" >> $GITHUB_STEP_SUMMARY
         echo "✅ Integration tests completed" >> $GITHUB_STEP_SUMMARY
         echo "✅ Functional tests completed" >> $GITHUB_STEP_SUMMARY
 
