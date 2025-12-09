@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STT Control Panel - Adaptive Self-Learning Agentic AI System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-microphone-alt"></i>
+                <h1>STT Control Panel</h1>
+            </div>
+            <div class="system-status">
+                <div class="status-indicator" id="system-status">
+                    <i class="fas fa-circle"></i>
+                    <span>Connecting...</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="nav-tabs">
+        <div class="container">
+            <button class="tab-btn active" data-tab="dashboard">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </button>
+            <button class="tab-btn" data-tab="transcribe">
+                <i class="fas fa-microphone"></i> Transcribe
+            </button>
+            <button class="tab-btn" data-tab="data">
+                <i class="fas fa-database"></i> Data Management
+            </button>
+            <button class="tab-btn" data-tab="finetuning">
+                <i class="fas fa-cog"></i> Fine-Tuning
+            </button>
+            <button class="tab-btn" data-tab="models">
+                <i class="fas fa-cube"></i> Models
+            </button>
+            <button class="tab-btn" data-tab="monitoring">
+                <i class="fas fa-chart-line"></i> Monitoring
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Dashboard Tab -->
+            <div class="tab-content active" id="dashboard">
+                <h2><i class="fas fa-tachometer-alt"></i> System Dashboard</h2>
+                
+                <div class="cards-grid">
+                    <!-- System Health Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-heartbeat"></i> System Health</h3>
+                            <span class="badge badge-success" id="health-badge">Healthy</span>
+                        </div>
+                        <div class="card-body" id="health-info">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Agent Statistics Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-robot"></i> Agent Statistics</h3>
+                            <button class="btn-icon" onclick="refreshAgentStats()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="card-body" id="agent-stats">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Data Management Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-database"></i> Data Statistics</h3>
+                            <button class="btn-icon" onclick="refreshDataStats()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="card-body" id="data-stats">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Model Information Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-cube"></i> Model Information</h3>
+                        </div>
+                        <div class="card-body" id="model-info">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="card mt-20">
+                    <div class="card-header">
+                        <h3><i class="fas fa-history"></i> Recent Activity</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="recent-activity" class="activity-list">
+                            <p class="text-muted">No recent activity</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transcribe Tab -->
+            <div class="tab-content" id="transcribe">
+                <h2><i class="fas fa-microphone"></i> Audio Transcription</h2>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Upload Audio File</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="upload-section">
+                            <div class="file-upload">
+                                <input type="file" id="audio-file" accept="audio/*" onchange="handleFileSelect(event)">
+                                <label for="audio-file" class="file-upload-label">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <span>Click to upload audio file</span>
+                                    <small>Supported formats: WAV, MP3, OGG</small>
+                                </label>
+                                <div id="file-info" class="file-info hidden"></div>
+                            </div>
+
+                            <div class="transcribe-options">
+                                <h4>Transcription Options</h4>
+                                <div class="option-group">
+                                    <label class="radio-label">
+                                        <input type="radio" name="transcribe-mode" value="baseline" checked>
+                                        <span>Baseline (Fast)</span>
+                                        <small>Simple transcription without error detection</small>
+                                    </label>
+                                    <label class="radio-label">
+                                        <input type="radio" name="transcribe-mode" value="agent">
+                                        <span>Agent (Recommended)</span>
+                                        <small>With error detection and auto-correction</small>
+                                    </label>
+                                </div>
+
+                                <div class="option-group" id="agent-options" style="display: none;">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="auto-correction" checked>
+                                        <span>Enable Auto-Correction</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="record-errors" checked>
+                                        <span>Record Errors Automatically</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <button class="btn btn-primary btn-large" onclick="transcribeAudio()" id="transcribe-btn" disabled>
+                                <i class="fas fa-play"></i> Transcribe Audio
+                            </button>
+                        </div>
+
+                        <div id="transcription-result" class="transcription-result hidden">
+                            <!-- Results will be displayed here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Management Tab -->
+            <div class="tab-content" id="data">
+                <h2><i class="fas fa-database"></i> Data Management</h2>
+                
+                <div class="cards-grid">
+                    <!-- Failed Cases -->
+                    <div class="card span-2">
+                        <div class="card-header">
+                            <h3><i class="fas fa-exclamation-circle"></i> Failed Cases</h3>
+                            <button class="btn btn-secondary" onclick="refreshFailedCases()">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="filter-bar">
+                                <input type="text" id="case-search" placeholder="Search cases..." class="search-input">
+                                <select id="case-filter" class="filter-select">
+                                    <option value="all">All Cases</option>
+                                    <option value="uncorrected">Uncorrected</option>
+                                    <option value="corrected">Corrected</option>
+                                </select>
+                            </div>
+                            <div id="failed-cases-list" class="cases-list">
+                                <div class="loading">Loading...</div>
+                            </div>
+                            <div class="pagination">
+                                <button class="btn btn-sm" onclick="loadFailedCases(0)" id="prev-btn">
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </button>
+                                <span id="page-info">Page 1</span>
+                                <button class="btn btn-sm" onclick="loadFailedCases(1)" id="next-btn">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dataset Preparation -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-layer-group"></i> Dataset Preparation</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Minimum Error Score</label>
+                                <input type="number" id="min-error-score" value="0.5" step="0.1" min="0" max="1" class="input">
+                            </div>
+                            <div class="form-group">
+                                <label>Max Samples</label>
+                                <input type="number" id="max-samples" value="1000" class="input">
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="balance-errors" checked>
+                                    <span>Balance Error Types</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="create-version" checked>
+                                    <span>Create Version</span>
+                                </label>
+                            </div>
+                            <button class="btn btn-primary" onclick="prepareDataset()">
+                                <i class="fas fa-cogs"></i> Prepare Dataset
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Available Datasets -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-folder"></i> Available Datasets</h3>
+                            <button class="btn-icon" onclick="refreshDatasets()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="card-body" id="datasets-list">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fine-Tuning Tab -->
+            <div class="tab-content" id="finetuning">
+                <h2><i class="fas fa-cog"></i> Fine-Tuning Orchestration</h2>
+                
+                <div class="cards-grid">
+                    <!-- Orchestrator Status -->
+                    <div class="card span-2">
+                        <div class="card-header">
+                            <h3><i class="fas fa-info-circle"></i> Orchestrator Status</h3>
+                            <button class="btn-icon" onclick="refreshFinetuningStatus()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="card-body" id="finetuning-status">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Trigger Fine-Tuning -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-play-circle"></i> Trigger Fine-Tuning</h3>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-10">
+                                Manually trigger a fine-tuning job. Force trigger will bypass readiness checks.
+                            </p>
+                            <label class="checkbox-label mb-10">
+                                <input type="checkbox" id="force-trigger">
+                                <span>Force Trigger</span>
+                            </label>
+                            <button class="btn btn-primary btn-large" onclick="triggerFinetuning()">
+                                <i class="fas fa-rocket"></i> Trigger Fine-Tuning
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Jobs List -->
+                    <div class="card span-2">
+                        <div class="card-header">
+                            <h3><i class="fas fa-tasks"></i> Fine-Tuning Jobs</h3>
+                            <button class="btn-icon" onclick="refreshJobs()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="card-body" id="jobs-list">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Models Tab -->
+            <div class="tab-content" id="models">
+                <h2><i class="fas fa-cube"></i> Model Management</h2>
+                
+                <div class="cards-grid">
+                    <!-- Current Model -->
+                    <div class="card span-2">
+                        <div class="card-header">
+                            <h3><i class="fas fa-cube"></i> Current Model</h3>
+                        </div>
+                        <div class="card-body" id="current-model-info">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Deployed Model -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-check-circle"></i> Deployed Model</h3>
+                        </div>
+                        <div class="card-body" id="deployed-model-info">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Model Versions -->
+                    <div class="card span-2">
+                        <div class="card-header">
+                            <h3><i class="fas fa-code-branch"></i> Model Versions</h3>
+                            <button class="btn-icon" onclick="refreshModelVersions()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="card-body" id="model-versions-list">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monitoring Tab -->
+            <div class="tab-content" id="monitoring">
+                <h2><i class="fas fa-chart-line"></i> Performance Monitoring</h2>
+                
+                <div class="cards-grid">
+                    <!-- Performance Metrics -->
+                    <div class="card span-2">
+                        <div class="card-header">
+                            <h3><i class="fas fa-chart-bar"></i> Performance Metrics</h3>
+                            <button class="btn-icon" onclick="refreshPerformanceMetrics()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="card-body" id="performance-metrics">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Trends -->
+                    <div class="card span-2">
+                        <div class="card-header">
+                            <h3><i class="fas fa-chart-line"></i> Performance Trends</h3>
+                            <div class="filter-group">
+                                <select id="trend-metric" onchange="refreshTrends()">
+                                    <option value="wer">WER</option>
+                                    <option value="cer">CER</option>
+                                </select>
+                                <select id="trend-days" onchange="refreshTrends()">
+                                    <option value="7">Last 7 days</option>
+                                    <option value="30" selected>Last 30 days</option>
+                                    <option value="90">Last 90 days</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="card-body" id="trends-chart">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal for Case Details -->
+    <div id="case-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-file-alt"></i> Case Details</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Case details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
