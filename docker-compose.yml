@@ -1,0 +1,54 @@
+# Docker Compose for local development and testing
+version: '3.8'
+
+services:
+  # Main API service
+  stt-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8080"
+    environment:
+      - PORT=8080
+      - MODEL_NAME=whisper
+      - USE_GCS=false
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount data directory for persistent storage
+      - ./data:/app/data
+      # Mount source for development (hot reload)
+      - ./src:/app/src
+      - ./frontend:/app/frontend
+    command: uvicorn src.control_panel_api:app --host 0.0.0.0 --port 8080 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - stt-network
+
+  # Optional: Add a reverse proxy for production-like testing
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - stt-api
+    networks:
+      - stt-network
+    profiles:
+      - production
+
+networks:
+  stt-network:
+    driver: bridge
+
+volumes:
+  data-volume:
+    driver: local
+
