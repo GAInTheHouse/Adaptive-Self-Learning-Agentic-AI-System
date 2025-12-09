@@ -1,0 +1,109 @@
+# Cloud Build configuration for automated deployments
+# Triggers on push to main branch
+
+steps:
+  # Step 1: Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-image'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/stt-api:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/stt-api:latest'
+      - '.'
+    timeout: 1200s
+
+  # Step 2: Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-image'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/stt-api:$COMMIT_SHA'
+    waitFor:
+      - 'build-image'
+
+  # Step 3: Push latest tag
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-latest'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/stt-api:latest'
+    waitFor:
+      - 'build-image'
+
+  # Step 4: Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-cloud-run'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'stt-api'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/stt-api:$COMMIT_SHA'
+      - '--region'
+      - '${_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '${_MEMORY}'
+      - '--cpu'
+      - '${_CPU}'
+      - '--timeout'
+      - '${_TIMEOUT}'
+      - '--max-instances'
+      - '${_MAX_INSTANCES}'
+      - '--set-env-vars'
+      - 'USE_GCS=true,GCS_DATASETS_BUCKET=${_DATASETS_BUCKET},GCS_MODELS_BUCKET=${_MODELS_BUCKET},GCS_LOGS_BUCKET=${_LOGS_BUCKET}'
+      - '--service-account'
+      - '${_SERVICE_ACCOUNT}'
+    waitFor:
+      - 'push-image'
+
+  # Step 5: Run smoke tests
+  - name: 'gcr.io/cloud-builders/curl'
+    id: 'smoke-test'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        SERVICE_URL=$(gcloud run services describe stt-api --region ${_REGION} --format 'value(status.url)')
+        echo "Testing $SERVICE_URL/api/health"
+        curl -f $SERVICE_URL/api/health || exit 1
+        echo "Health check passed!"
+    waitFor:
+      - 'deploy-cloud-run'
+
+# Substitution variables (with defaults)
+substitutions:
+  _REGION: 'us-central1'
+  _MEMORY: '4Gi'
+  _CPU: '2'
+  _TIMEOUT: '300'
+  _MAX_INSTANCES: '10'
+  _SERVICE_ACCOUNT: 'stt-service-account@${PROJECT_ID}.iam.gserviceaccount.com'
+  _DATASETS_BUCKET: '${PROJECT_ID}-stt-datasets'
+  _MODELS_BUCKET: '${PROJECT_ID}-stt-models'
+  _LOGS_BUCKET: '${PROJECT_ID}-stt-logs'
+
+# Build options
+options:
+  machineType: 'N1_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
+  dynamicSubstitutions: true
+
+# Build timeout
+timeout: 1800s
+
+# Images to be pushed to Container Registry
+images:
+  - 'gcr.io/$PROJECT_ID/stt-api:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/stt-api:latest'
+
+# Tags for organizing builds
+tags:
+  - 'stt-api'
+  - 'production'
+
