@@ -552,18 +552,35 @@ async def startup_event():
     print("="*60 + "\n")
 
 
-# Mount static files for frontend (will be created next)
+# Mount static files for frontend
 static_dir = Path(__file__).parent.parent / "frontend"
 if static_dir.exists():
-    app.mount("/frontend", StaticFiles(directory=str(static_dir), html=True), name="frontend")
+    # Mount CSS and JS files at root level for proper access
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
     
-    @app.get("/app")
+    @app.get("/app", response_class=FileResponse)
     async def serve_frontend():
         """Serve the frontend application"""
         index_file = static_dir / "index.html"
         if index_file.exists():
             return FileResponse(str(index_file))
         raise HTTPException(status_code=404, detail="Frontend not found")
+    
+    @app.get("/styles.css", response_class=FileResponse)
+    async def serve_css():
+        """Serve CSS file"""
+        css_file = static_dir / "styles.css"
+        if css_file.exists():
+            return FileResponse(str(css_file), media_type="text/css")
+        raise HTTPException(status_code=404, detail="CSS not found")
+    
+    @app.get("/app.js", response_class=FileResponse)
+    async def serve_js():
+        """Serve JavaScript file"""
+        js_file = static_dir / "app.js"
+        if js_file.exists():
+            return FileResponse(str(js_file), media_type="application/javascript")
+        raise HTTPException(status_code=404, detail="JavaScript not found")
 
 
 # To run: uvicorn src.control_panel_api:app --reload --port 8000
