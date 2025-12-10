@@ -41,12 +41,42 @@ app.add_middleware(
 
 # Initialize components
 print("🚀 Initializing STT Control Panel...")
-baseline_model = BaselineSTTModel(model_name="whisper")
-agent = STTAgent(
-    baseline_model=baseline_model,
+# We'll create model instances dynamically based on selection
+# For now, initialize a default one
+default_baseline_model = BaselineSTTModel(model_name="whisper-base")
+default_agent = STTAgent(
+    baseline_model=default_baseline_model,
     use_llm_correction=True,
     use_quantization=False
 )
+
+# Store model instances for different versions (lazy loading)
+model_instances = {}
+agent_instances = {}
+
+def get_model_and_agent(model_name: str):
+    """
+    Get or create model and agent instances for the specified model version.
+    Uses lazy loading to avoid loading all models at startup.
+    """
+    if model_name not in model_instances:
+        print(f"🔄 Loading STT model: {model_name}")
+        try:
+            model = BaselineSTTModel(model_name=model_name)
+            agent = STTAgent(
+                baseline_model=model,
+                use_llm_correction=True,
+                use_quantization=False
+            )
+            model_instances[model_name] = model
+            agent_instances[model_name] = agent
+            print(f"✅ Model {model_name} loaded successfully")
+        except Exception as e:
+            print(f"❌ Failed to load model {model_name}: {e}")
+            # Fallback to default
+            return default_baseline_model, default_agent
+    
+    return model_instances[model_name], agent_instances[model_name]
 data_system = IntegratedDataManagementSystem(
     base_dir="data/production",
     use_gcs=False  # Set to True for GCS integration
@@ -63,6 +93,12 @@ except Exception as e:
     print(f"⚠️  Fine-tuning coordinator initialization failed: {e}")
 
 print("✅ Control Panel API initialized successfully")
+
+# Simple in-memory performance counters
+perf_counters = {
+    "total_inferences": 0,
+    "total_inference_time": 0.0,
+}
 
 
 # ==================== PYDANTIC MODELS ====================
@@ -109,7 +145,7 @@ async def root():
 @app.get("/api/health")
 async def health_check():
     """Comprehensive health check"""
-    agent_stats = agent.get_agent_stats()
+    agent_stats = default_agent.get_agent_stats()
     
     health = {
         "status": "healthy",
@@ -117,8 +153,8 @@ async def health_check():
         "components": {
             "baseline_model": {
                 "status": "operational",
-                "model": baseline_model.model_name,
-                "device": baseline_model.device
+                "model": default_baseline_model.model_name,
+                "device": default_baseline_model.device
             },
             "agent": {
                 "status": "operational",
@@ -144,7 +180,7 @@ async def get_system_stats():
         data_stats = data_system.get_system_statistics()
         
         # Get agent stats
-        agent_stats = agent.get_agent_stats()
+        agent_stats = default_agent.get_agent_stats()
         
         # Get coordinator stats if available
         coordinator_stats = {}
@@ -162,6 +198,31 @@ async def get_system_stats():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== SAMPLE RECORDINGS ====================
+
+@app.get("/api/data/sample-recordings")
+async def list_sample_recordings():
+    """
+    List files under data/sample_recordings for UI display.
+    """
+    try:
+        sample_dir = Path("data/sample_recordings")
+        if not sample_dir.exists():
+            return {"files": []}
+        
+        files = []
+        for f in sample_dir.iterdir():
+            if f.is_file():
+                files.append({
+                    "name": f.name,
+                    "path": str(f),
+                    "size_bytes": f.stat().st_size
+                })
+        
+        return {"files": sorted(files, key=lambda x: x["name"].lower())}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list sample recordings: {e}")
 
 
 # ==================== MOCK DATA FOR DEMO ====================
@@ -241,16 +302,8 @@ async def transcribe_baseline(
     Faster than agent mode since no LLM processing is involved
     """
     try:
-        # For demo purposes, use mock data if requested
-        use_mock = os.getenv("USE_MOCK_DATA", "true").lower() == "true"
-        
-        if use_mock:
-            # Baseline mode is faster - just STT processing (1-2 seconds)
-            import asyncio
-            import random
-            latency = random.uniform(1.0, 2.0)
-            await asyncio.sleep(latency)
-            return get_mock_transcription_result(model, "baseline")
+        # Get the appropriate model instance
+        stt_model, _ = get_model_and_agent(model)
         
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
             content = await file.read()
@@ -258,16 +311,20 @@ async def transcribe_baseline(
             tmp_path = tmp.name
         
         start = time.time()
-        result = baseline_model.transcribe(tmp_path)
+        result = stt_model.transcribe(tmp_path)
         result["inference_time_seconds"] = time.time() - start
         result["model_used"] = model
         result["original_transcript"] = result.get("transcript", "")
+        
+        # Update perf counters
+        perf_counters["total_inferences"] += 1
+        perf_counters["total_inference_time"] += result.get("inference_time_seconds", 0.0)
         
         os.remove(tmp_path)
         return result
     
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
 
 
 @app.post("/api/transcribe/agent")
@@ -279,19 +336,11 @@ async def transcribe_agent(
 ):
     """
     Transcribe with agent error detection and optional auto-recording
-    Includes realistic latency to mimic LLM processing time (10-15 seconds)
+    Uses real STT models and LLM for correction
     """
     try:
-        # For demo purposes, use mock data if requested
-        use_mock = os.getenv("USE_MOCK_DATA", "true").lower() == "true"
-        
-        if use_mock:
-            # Simulate LLM processing time (10-15 seconds for realistic demo)
-            import asyncio
-            import random
-            latency = random.uniform(10.0, 15.0)
-            await asyncio.sleep(latency)
-            return get_mock_transcription_result(model, "agent", auto_correction)
+        # Get the appropriate model and agent instances
+        stt_model, stt_agent = get_model_and_agent(model)
         
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
             content = await file.read()
@@ -302,39 +351,86 @@ async def transcribe_agent(
         try:
             audio, sr = librosa.load(tmp_path, sr=16000)
             audio_length = len(audio) / sr
-        except:
+        except Exception as e:
+            print(f"Warning: Could not load audio for length calculation: {e}")
             audio_length = None
         
-        # Transcribe with agent
-        result = agent.transcribe_with_agent(
+        # Transcribe with agent (this includes STT + LLM correction)
+        start = time.time()
+        result = stt_agent.transcribe_with_agent(
             audio_path=tmp_path,
             audio_length_seconds=audio_length,
             enable_auto_correction=auto_correction
         )
+        result["inference_time_seconds"] = result.get("inference_time_seconds", time.time() - start)
         
         result["model_used"] = model
         
+        # Ensure we have original_transcript and corrected_transcript
+        if "original_transcript" not in result:
+            result["original_transcript"] = result.get("transcript", "")
+        
+        # If auto_correction was enabled and LLM made corrections, use the corrected version
+        if auto_correction and result.get("corrections", {}).get("applied"):
+            result["corrected_transcript"] = result.get("transcript", "")
+        elif not result.get("error_detection", {}).get("has_errors", False):
+            # No errors detected, so original and corrected are the same
+            result["corrected_transcript"] = result.get("transcript", "")
+        else:
+            # Errors detected but correction not applied
+            result["corrected_transcript"] = result.get("transcript", result.get("original_transcript", ""))
+
+        # Derive error_detection based on STT vs LLM transcript to avoid hardcoded values
+        orig = (result.get("original_transcript") or result.get("transcript") or "").strip()
+        corrected = (result.get("corrected_transcript") or result.get("transcript") or "").strip()
+
+        if orig == corrected:
+            result["error_detection"] = {
+                "has_errors": False,
+                "error_count": 0,
+                "error_score": 0.0,
+                "error_types": {}
+            }
+        else:
+            orig_words = orig.split()
+            corr_words = corrected.split()
+            diff_count = sum(1 for o, c in zip(orig_words, corr_words) if o != c) + abs(len(orig_words) - len(corr_words))
+            error_score = min(1.0, max(0.0, diff_count / max(1, len(orig_words) or 1)))
+            result["error_detection"] = {
+                "has_errors": True,
+                "error_count": diff_count,
+                "error_score": error_score,
+                "error_types": {"diff": diff_count}
+            }
+        
         # Auto-record if errors detected and enabled
         case_id = None
-        if record_if_error and result['error_detection']['has_errors']:
+        if record_if_error and result.get('error_detection', {}).get('has_errors', False):
             try:
                 case_id = data_system.record_failed_transcription(
                     audio_path=tmp_path,
                     original_transcript=result['original_transcript'],
-                    corrected_transcript=result['transcript'] if auto_correction else None,
-                    error_types=list(result['error_detection']['error_types'].keys()),
-                    error_score=result['error_detection']['error_score'],
-                    inference_time=result['inference_time_seconds']
+                    corrected_transcript=result.get('corrected_transcript') if auto_correction else None,
+                    error_types=list(result.get('error_detection', {}).get('error_types', {}).keys()),
+                    error_score=result.get('error_detection', {}).get('error_score', 0.0),
+                    inference_time=result.get('inference_time_seconds', 0.0)
                 )
                 result['case_id'] = case_id
             except Exception as e:
                 print(f"Failed to record error: {e}")
         
         os.remove(tmp_path)
+        
+        # Update perf counters
+        perf_counters["total_inferences"] += 1
+        perf_counters["total_inference_time"] += result.get("inference_time_seconds", 0.0)
+
         return result
     
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
 
 
 # ==================== AGENT MANAGEMENT ====================
@@ -343,7 +439,7 @@ async def transcribe_agent(
 async def submit_feedback(feedback: FeedbackRequest):
     """Submit feedback for agent learning"""
     try:
-        agent.submit_feedback(
+        default_agent.submit_feedback(
             transcript_id=feedback.transcript_id,
             user_feedback=feedback.user_feedback,
             is_correct=feedback.is_correct,
@@ -362,7 +458,7 @@ async def submit_feedback(feedback: FeedbackRequest):
 async def get_agent_stats():
     """Get agent statistics"""
     try:
-        return agent.get_agent_stats()
+        return default_agent.get_agent_stats()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -371,7 +467,7 @@ async def get_agent_stats():
 async def get_learning_data():
     """Get agent learning data"""
     try:
-        return agent.get_learning_data()
+        return default_agent.get_learning_data()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -563,10 +659,11 @@ async def get_job_details(job_id: str):
 # ==================== MODEL MANAGEMENT ====================
 
 @app.get("/api/models/info")
-async def get_model_info():
-    """Get current model information"""
+async def get_model_info(model: str = Query("whisper-base", description="Model to get info for")):
+    """Get model information for specified model"""
     try:
-        return baseline_model.get_model_info()
+        stt_model, _ = get_model_and_agent(model)
+        return stt_model.get_model_info()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -608,6 +705,19 @@ async def get_performance_metrics():
     """Get performance metrics history"""
     try:
         report = data_system.metadata_tracker.generate_performance_report()
+        # Overlay live perf counters
+        overall = report.get("overall_stats", {})
+        total_inf = max(overall.get("total_inferences", 0), perf_counters["total_inferences"])
+        total_time = perf_counters["total_inference_time"] or overall.get("total_inference_time", 0.0)
+        avg_time = (total_time / total_inf) if total_inf > 0 else overall.get("avg_inference_time", 0.0)
+        overall.update({
+            "total_inferences": total_inf,
+            "total_inference_time": total_time,
+            "avg_inference_time": avg_time,
+            "error_rate": overall.get("error_rate", 0.0),
+            "correction_rate": overall.get("correction_rate", 0.0),
+        })
+        report["overall_stats"] = overall
         return report
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -634,8 +744,8 @@ async def get_performance_trends(
 @app.on_event("startup")
 async def startup_event():
     """Log startup information"""
-    info = baseline_model.get_model_info()
-    agent_stats = agent.get_agent_stats()
+    info = default_baseline_model.get_model_info()
+    agent_stats = default_agent.get_agent_stats()
     
     print("\n" + "="*60)
     print("🎯 STT CONTROL PANEL API STARTED")

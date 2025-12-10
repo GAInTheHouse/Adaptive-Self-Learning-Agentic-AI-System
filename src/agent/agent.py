@@ -120,6 +120,7 @@ class STTAgent:
         inference_time = time.time() - start_time
         
         transcript = baseline_result.get('transcript', '')
+        baseline_result.setdefault("original_transcript", transcript)
         
         # Step 2: Detect errors
         errors = self.error_detector.detect_errors(

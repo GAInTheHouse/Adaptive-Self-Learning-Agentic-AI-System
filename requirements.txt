@@ -38,6 +38,11 @@ tqdm>=4.65.0
 pyyaml>=6.0
 python-dotenv>=1.0.0
 
+# MLX for Gemma 3n (Apple Silicon optimized)
+mlx>=0.19.0
+mlx-lm>=0.19.0
+mlx-vlm>=0.1.0  # For vision-language models like Gemma 3n
+
 # Development
 pytest>=7.4.0
 black>=23.0.0

@@ -70,51 +70,13 @@
                         </div>
                     </div>
 
-                    <!-- Agent Statistics Card -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h3><i class="fas fa-robot"></i> Agent Statistics</h3>
-                            <button class="btn-icon" onclick="refreshAgentStats()">
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
-                        </div>
-                        <div class="card-body" id="agent-stats">
-                            <div class="loading">Loading...</div>
-                        </div>
-                    </div>
-
-                    <!-- Data Management Card -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h3><i class="fas fa-database"></i> Data Statistics</h3>
-                            <button class="btn-icon" onclick="refreshDataStats()">
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
-                        </div>
-                        <div class="card-body" id="data-stats">
-                            <div class="loading">Loading...</div>
-                        </div>
-                    </div>
-
                     <!-- Model Information Card -->
                     <div class="card">
                         <div class="card-header">
-                            <h3><i class="fas fa-cube"></i> Model Information</h3>
+                            <h3><i class="fas fa-cube"></i> Current Model Information</h3>
                         </div>
                         <div class="card-body" id="model-info">
                             <div class="loading">Loading...</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Recent Activity -->
-                <div class="card mt-20">
-                    <div class="card-header">
-                        <h3><i class="fas fa-history"></i> Recent Activity</h3>
-                    </div>
-                    <div class="card-body">
-                        <div id="recent-activity" class="activity-list">
-                            <p class="text-muted">No recent activity</p>
                         </div>
                     </div>
                 </div>
@@ -146,9 +108,9 @@
                                 <div class="form-group">
                                     <label for="model-selector">Select STT Model</label>
                                     <select id="model-selector" class="filter-select">
-                                        <option value="gemma-base-v1">Gemma Base v1 (Original - Poor Performance)</option>
-                                        <option value="gemma-finetuned-v2">Gemma Fine-tuned v2 (Improved)</option>
-                                        <option value="gemma-finetuned-v3">Gemma Fine-tuned v3 (Best Performance)</option>
+                                        <option value="gemma-base-v1">Gemma Base v1 (Original - Poor Performance - Whisper Tiny)</option>
+                                        <option value="gemma-finetuned-v2">Gemma Fine-tuned v2 (Improved - Gemma 3n)</option>
+                                        <option value="gemma-finetuned-v3">Gemma Fine-tuned v3 (Best Performance - Gemma 3n)</option>
                                     </select>
                                     <small class="text-muted">Select the STT model version to use for transcription</small>
                                 </div>
@@ -224,14 +186,6 @@
                             </button>
                         </div>
                         <div class="card-body">
-                            <div class="filter-bar">
-                                <input type="text" id="case-search" placeholder="Search cases..." class="search-input">
-                                <select id="case-filter" class="filter-select">
-                                    <option value="all">All Cases</option>
-                                    <option value="uncorrected">Uncorrected</option>
-                                    <option value="corrected">Corrected</option>
-                                </select>
-                            </div>
                             <div id="failed-cases-list" class="cases-list">
                                 <div class="loading">Loading...</div>
                             </div>
@@ -244,36 +198,6 @@
                                     Next <i class="fas fa-chevron-right"></i>
                                 </button>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Dataset Preparation -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h3><i class="fas fa-layer-group"></i> Dataset Preparation</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="form-group">
-                                <label>Minimum Error Score</label>
-                                <input type="number" id="min-error-score" value="0.5" step="0.1" min="0" max="1" class="input">
-                            </div>
-                            <div class="form-group">
-                                <label>Max Samples</label>
-                                <input type="number" id="max-samples" value="1000" class="input">
-                            </div>
-                            <div class="form-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="balance-errors" checked>
-                                    <span>Balance Error Types</span>
-                                </label>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="create-version" checked>
-                                    <span>Create Version</span>
-                                </label>
-                            </div>
-                            <button class="btn btn-primary" onclick="prepareDataset()">
-                                <i class="fas fa-cogs"></i> Prepare Dataset
-                            </button>
                         </div>
                     </div>
 
@@ -294,7 +218,7 @@
 
             <!-- Fine-Tuning Tab -->
             <div class="tab-content" id="finetuning">
-                <h2><i class="fas fa-cog"></i> Fine-Tuning Orchestration</h2>
+                <h2><i class="fas fa-cog"></i> Fine-Tuning Orchestrator</h2>
                 
                 <div class="cards-grid">
                     <!-- Orchestrator Status -->
@@ -355,16 +279,6 @@
                             <h3><i class="fas fa-cube"></i> Current Model</h3>
                         </div>
                         <div class="card-body" id="current-model-info">
-                            <div class="loading">Loading...</div>
-                        </div>
-                    </div>
-
-                    <!-- Deployed Model -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h3><i class="fas fa-check-circle"></i> Deployed Model</h3>
-                        </div>
-                        <div class="card-body" id="deployed-model-info">
                             <div class="loading">Loading...</div>
                         </div>
                     </div>
