@@ -15,60 +15,90 @@ if [ ! -f "src/control_panel_api.py" ]; then
     exit 1
 fi
 
-# Initialize conda - try multiple locations
-echo "🔄 Initializing conda..."
-
-# Try to find conda.sh in common locations
-CONDA_INIT_FOUND=false
-
-# Check common conda installation paths
-for CONDA_PATH in \
-    "/opt/homebrew/anaconda3/etc/profile.d/conda.sh" \
-    "/opt/homebrew/Caskroom/miniconda/base/etc/profile.d/conda.sh" \
-    "$HOME/anaconda3/etc/profile.d/conda.sh" \
-    "$HOME/miniconda3/etc/profile.d/conda.sh" \
-    "/opt/conda/etc/profile.d/conda.sh" \
-    "/usr/local/anaconda3/etc/profile.d/conda.sh" \
-    "/usr/local/miniconda3/etc/profile.d/conda.sh"
-do
-    if [ -f "$CONDA_PATH" ]; then
-        source "$CONDA_PATH"
-        CONDA_INIT_FOUND=true
-        echo "✅ Found conda at: $CONDA_PATH"
-        break
+# Check if we're already in a virtual environment
+if [ -n "$VIRTUAL_ENV" ] || [ -n "$CONDA_DEFAULT_ENV" ]; then
+    echo "✅ Already in a virtual environment"
+    if [ -n "$VIRTUAL_ENV" ]; then
+        echo "   Using venv: $VIRTUAL_ENV"
+    elif [ -n "$CONDA_DEFAULT_ENV" ]; then
+        echo "   Using conda: $CONDA_DEFAULT_ENV"
     fi
-done
-
-# If not found in standard locations, try to use conda from PATH
-if [ "$CONDA_INIT_FOUND" = false ]; then
-    if command -v conda &> /dev/null; then
-        echo "✅ Using conda from PATH"
-        # Initialize conda for this shell
-        eval "$(conda shell.bash hook)"
-        CONDA_INIT_FOUND=true
-    else
-        echo "❌ Error: Conda not found!"
-        echo "Please ensure conda is installed and in your PATH."
-        exit 1
+    ENV_ACTIVATED=true
+else
+    ENV_ACTIVATED=false
+    
+    # Try to activate venv first (preferred for this project)
+    if [ -d "venv" ]; then
+        echo "🔄 Activating venv..."
+        source venv/bin/activate
+        if [ $? -eq 0 ]; then
+            echo "✅ Venv activated"
+            ENV_ACTIVATED=true
+        fi
+    elif [ -d ".venv" ]; then
+        echo "🔄 Activating .venv..."
+        source .venv/bin/activate
+        if [ $? -eq 0 ]; then
+            echo "✅ .venv activated"
+            ENV_ACTIVATED=true
+        fi
+    fi
+    
+    # If venv not found, try conda as fallback
+    if [ "$ENV_ACTIVATED" = false ]; then
+        echo "🔄 Venv not found, trying conda..."
+        
+        # Try to find conda.sh in common locations
+        CONDA_INIT_FOUND=false
+        
+        # Check common conda installation paths
+        for CONDA_PATH in \
+            "/opt/homebrew/anaconda3/etc/profile.d/conda.sh" \
+            "/opt/homebrew/Caskroom/miniconda/base/etc/profile.d/conda.sh" \
+            "$HOME/anaconda3/etc/profile.d/conda.sh" \
+            "$HOME/miniconda3/etc/profile.d/conda.sh" \
+            "/opt/conda/etc/profile.d/conda.sh" \
+            "/usr/local/anaconda3/etc/profile.d/conda.sh" \
+            "/usr/local/miniconda3/etc/profile.d/conda.sh"
+        do
+            if [ -f "$CONDA_PATH" ]; then
+                source "$CONDA_PATH"
+                CONDA_INIT_FOUND=true
+                echo "✅ Found conda at: $CONDA_PATH"
+                break
+            fi
+        done
+        
+        # If not found in standard locations, try to use conda from PATH
+        if [ "$CONDA_INIT_FOUND" = false ]; then
+            if command -v conda &> /dev/null; then
+                echo "✅ Using conda from PATH"
+                # Initialize conda for this shell
+                eval "$(conda shell.bash hook)"
+                CONDA_INIT_FOUND=true
+            fi
+        fi
+        
+        # Activate conda environment if conda is available
+        if [ "$CONDA_INIT_FOUND" = true ]; then
+            echo "🔄 Activating conda environment: stt-genai..."
+            conda activate stt-genai 2>/dev/null
+            if [ $? -eq 0 ]; then
+                echo "✅ Conda environment 'stt-genai' activated"
+                ENV_ACTIVATED=true
+            else
+                echo "⚠️  Conda environment 'stt-genai' not found, but continuing..."
+            fi
+        fi
+    fi
+    
+    # If still no environment activated, warn but continue
+    if [ "$ENV_ACTIVATED" = false ]; then
+        echo "⚠️  Warning: No virtual environment activated!"
+        echo "   It's recommended to use a virtual environment."
+        echo "   You can create one with: python -m venv venv"
     fi
 fi
-
-# Activate conda environment
-echo "🔄 Activating conda environment: stt-genai..."
-conda activate stt-genai
-if [ $? -ne 0 ]; then
-    echo "❌ Error: Could not activate conda environment 'stt-genai'!"
-    echo "Available environments:"
-    conda env list
-    echo ""
-    echo "Please ensure the environment exists or create it:"
-    echo "  conda create -n stt-genai python=3.8"
-    echo "  conda activate stt-genai"
-    echo "  pip install -r requirements.txt"
-    exit 1
-fi
-
-echo "✅ Conda environment 'stt-genai' activated"
 
 # Check if required packages are installed
 echo "🔍 Checking dependencies..."

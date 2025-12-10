@@ -164,14 +164,94 @@ async def get_system_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== MOCK DATA FOR DEMO ====================
+
+def get_mock_transcription_result(model: str, mode: str, auto_correction: bool = True) -> Dict[str, Any]:
+    """
+    Generate mock transcription results for demo purposes.
+    Shows how different model versions perform differently on health sector audio.
+    """
+    import random
+    
+    # Health sector example transcript
+    gold_standard = "The patient presents with chest pain and shortness of breath. Blood pressure is 140 over 90. Recommend ECG and chest X-ray to rule out cardiac issues."
+    
+    # For base model, introduce subtle errors (2-3 words differing)
+    if model == "gemma-base-v1":
+        # Subtle differences: "presents" -> "presenting", "ECG" -> "EKG", "rule out" -> "rules out"
+        original_text = "The patient presenting with chest pain and shortness of breath. Blood pressure is 140 over 90. Recommend EKG and chest X-ray to rules out cardiac issues."
+        refined_text = gold_standard
+        has_errors = True
+        error_score = 0.65
+        error_count = 3
+    elif model == "gemma-finetuned-v2":
+        # Very minor error: just "EKG" instead of "ECG"
+        original_text = "The patient presents with chest pain and shortness of breath. Blood pressure is 140 over 90. Recommend EKG and chest X-ray to rule out cardiac issues."
+        refined_text = gold_standard
+        has_errors = True
+        error_score = 0.25
+        error_count = 1
+    else:  # v3 - best performance, fine-tuned on health sector data
+        original_text = gold_standard
+        refined_text = gold_standard
+        has_errors = False
+        error_score = 0.05
+        error_count = 0
+    
+    result = {
+        "transcript": refined_text if (auto_correction and has_errors) else original_text,
+        "original_transcript": original_text,
+        "corrected_transcript": refined_text if has_errors else None,
+        "model_used": model,
+        "inference_time_seconds": round(random.uniform(0.5, 2.0), 2),
+        "error_detection": {
+            "has_errors": has_errors,
+            "error_score": error_score,
+            "error_count": error_count,
+            "error_types": {
+                "medical_terminology": error_count if has_errors else 0,
+                "spelling": 0,
+                "grammar": 0
+            }
+        }
+    }
+    
+    if auto_correction and has_errors:
+        result["corrections"] = {
+            "applied": True,
+            "count": error_count
+        }
+    
+    # Generate a mock case_id if errors detected
+    if has_errors:
+        result["case_id"] = f"case_{int(time.time())}_{random.randint(1000, 9999)}"
+    
+    return result
+
+
 # ==================== TRANSCRIPTION ====================
 
 @app.post("/api/transcribe/baseline")
-async def transcribe_baseline(file: UploadFile = File(...)):
+async def transcribe_baseline(
+    file: UploadFile = File(...),
+    model: str = Query("gemma-base-v1", description="STT model version to use")
+):
     """
-    Transcribe audio with baseline model only
+    Transcribe audio with baseline model only (no LLM correction)
+    Faster than agent mode since no LLM processing is involved
     """
     try:
+        # For demo purposes, use mock data if requested
+        use_mock = os.getenv("USE_MOCK_DATA", "true").lower() == "true"
+        
+        if use_mock:
+            # Baseline mode is faster - just STT processing (1-2 seconds)
+            import asyncio
+            import random
+            latency = random.uniform(1.0, 2.0)
+            await asyncio.sleep(latency)
+            return get_mock_transcription_result(model, "baseline")
+        
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
             content = await file.read()
             tmp.write(content)
@@ -180,6 +260,8 @@ async def transcribe_baseline(file: UploadFile = File(...)):
         start = time.time()
         result = baseline_model.transcribe(tmp_path)
         result["inference_time_seconds"] = time.time() - start
+        result["model_used"] = model
+        result["original_transcript"] = result.get("transcript", "")
         
         os.remove(tmp_path)
         return result
@@ -191,13 +273,26 @@ async def transcribe_baseline(file: UploadFile = File(...)):
 @app.post("/api/transcribe/agent")
 async def transcribe_agent(
     file: UploadFile = File(...),
+    model: str = Query("gemma-base-v1", description="STT model version to use"),
     auto_correction: bool = True,
     record_if_error: bool = True
 ):
     """
     Transcribe with agent error detection and optional auto-recording
+    Includes realistic latency to mimic LLM processing time (10-15 seconds)
     """
     try:
+        # For demo purposes, use mock data if requested
+        use_mock = os.getenv("USE_MOCK_DATA", "true").lower() == "true"
+        
+        if use_mock:
+            # Simulate LLM processing time (10-15 seconds for realistic demo)
+            import asyncio
+            import random
+            latency = random.uniform(10.0, 15.0)
+            await asyncio.sleep(latency)
+            return get_mock_transcription_result(model, "agent", auto_correction)
+        
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
             content = await file.read()
             tmp.write(content)
@@ -216,6 +311,8 @@ async def transcribe_agent(
             audio_length_seconds=audio_length,
             enable_auto_correction=auto_correction
         )
+        
+        result["model_used"] = model
         
         # Auto-record if errors detected and enabled
         case_id = None

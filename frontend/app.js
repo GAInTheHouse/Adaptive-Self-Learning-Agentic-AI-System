@@ -278,22 +278,53 @@ async function transcribeAudio() {
     }
     
     const mode = document.querySelector('input[name="transcribe-mode"]:checked').value;
+    const selectedModel = document.getElementById('model-selector').value;
     const autoCorrection = document.getElementById('auto-correction')?.checked || false;
     const recordErrors = document.getElementById('record-errors')?.checked || false;
     
     const transcribeBtn = document.getElementById('transcribe-btn');
     const originalText = transcribeBtn.innerHTML;
     transcribeBtn.disabled = true;
-    transcribeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Transcribing...';
+    
+    // Show different loading messages based on mode
+    if (mode === 'agent') {
+        transcribeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Transcribing with STT...';
+    } else {
+        transcribeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Transcribing...';
+    }
+    
+    // Show loading state in transcript boxes
+    const sttBox = document.getElementById('stt-original-transcript');
+    const llmBox = document.getElementById('llm-refined-transcript');
+    
+    if (sttBox) {
+        sttBox.innerHTML = '<p class="text-muted"><i class="fas fa-spinner fa-spin"></i> STT processing...</p>';
+    }
+    
+    if (llmBox) {
+        if (mode === 'agent') {
+            llmBox.innerHTML = '<p class="text-muted"><i class="fas fa-spinner fa-spin"></i> LLM is analyzing and refining transcript... (this may take 10-15 seconds)</p>';
+        } else {
+            llmBox.innerHTML = '<p class="text-muted">No LLM correction in baseline mode</p>';
+        }
+    }
+    
+    // Show the result container early so user sees loading state
+    const resultContainer = document.getElementById('transcription-result');
+    resultContainer.classList.remove('hidden');
     
     try {
         const formData = new FormData();
         formData.append('file', selectedFile);
         
         let url = `${API_BASE_URL}/api/transcribe/${mode}`;
+        const params = new URLSearchParams();
+        params.append('model', selectedModel);
         if (mode === 'agent') {
-            url += `?auto_correction=${autoCorrection}&record_if_error=${recordErrors}`;
+            params.append('auto_correction', autoCorrection);
+            params.append('record_if_error', recordErrors);
         }
+        url += `?${params.toString()}`;
         
         const response = await fetch(url, {
             method: 'POST',
@@ -305,24 +336,64 @@ async function transcribeAudio() {
         }
         
         const result = await response.json();
-        displayTranscriptionResult(result, mode);
+        displayTranscriptionResult(result, mode, selectedModel);
         showToast('Transcription completed successfully', 'success');
     } catch (error) {
         showToast('Transcription failed: ' + error.message, 'error');
+        document.getElementById('stt-original-transcript').innerHTML = '<p class="text-muted text-danger">Error: ' + error.message + '</p>';
+        document.getElementById('llm-refined-transcript').innerHTML = '<p class="text-muted text-danger">Error occurred</p>';
     } finally {
         transcribeBtn.disabled = false;
         transcribeBtn.innerHTML = originalText;
     }
 }
 
-function displayTranscriptionResult(result, mode) {
+function displayTranscriptionResult(result, mode, selectedModel) {
     const container = document.getElementById('transcription-result');
     container.classList.remove('hidden');
     
+    // Get transcripts - use original_transcript for STT and transcript (or corrected) for LLM refined
+    const sttOriginal = result.original_transcript || result.transcript || 'No transcription available';
+    
+    // Update the side-by-side transcript display
+    const sttBox = document.getElementById('stt-original-transcript');
+    const llmBox = document.getElementById('llm-refined-transcript');
+    
+    if (sttBox) {
+        sttBox.innerHTML = `<p>${sttOriginal}</p>`;
+    }
+    
+    if (llmBox) {
+        if (mode === 'baseline') {
+            // Baseline mode: no LLM correction, show same as STT
+            llmBox.innerHTML = `<p class="text-muted">No LLM correction in baseline mode. Use Agent mode to see LLM-refined transcript.</p>`;
+        } else {
+            // Agent mode: show LLM refined transcript
+            const llmRefined = result.corrected_transcript || result.transcript || 'No refined transcription available';
+            llmBox.innerHTML = `<p>${llmRefined}</p>`;
+        }
+    }
+    
+    // Remove any existing additional info sections (except transcripts-comparison)
+    const existingSections = container.querySelectorAll('.result-section');
+    existingSections.forEach(section => {
+        if (!section.closest('.transcripts-comparison')) {
+            section.remove();
+        }
+    });
+    
+    // Build additional info section
     let html = `
         <div class="result-section">
-            <h4><i class="fas fa-file-alt"></i> Transcript</h4>
-            <div class="transcript-box">${result.transcript}</div>
+            <h4><i class="fas fa-info-circle"></i> Model Information</h4>
+            <div class="stat-row">
+                <span class="stat-label">Selected Model</span>
+                <span class="stat-value">${selectedModel}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Mode</span>
+                <span class="stat-value">${mode === 'agent' ? 'Agent (with LLM correction)' : 'Baseline'}</span>
+            </div>
         </div>
     `;
     
@@ -342,13 +413,18 @@ function displayTranscriptionResult(result, mode) {
                 ${detection.has_errors ? `
                     <div class="stat-row">
                         <span class="stat-label">Error Count</span>
-                        <span class="stat-value">${detection.error_count}</span>
+                        <span class="stat-value">${detection.error_count || 0}</span>
                     </div>
                     <div class="stat-row">
                         <span class="stat-label">Error Score</span>
-                        <span class="stat-value">${detection.error_score.toFixed(2)}</span>
+                        <span class="stat-value">${(detection.error_score || 0).toFixed(2)}</span>
                     </div>
-                ` : ''}
+                ` : `
+                    <div class="stat-row">
+                        <span class="stat-label">Status</span>
+                        <span class="stat-value">No errors detected - model performing well!</span>
+                    </div>
+                `}
             </div>
         `;
         
@@ -357,12 +433,8 @@ function displayTranscriptionResult(result, mode) {
                 <div class="result-section">
                     <h4><i class="fas fa-check-circle"></i> Corrections Applied</h4>
                     <div class="stat-row">
-                        <span class="stat-label">Original</span>
-                        <span class="stat-value">${result.original_transcript}</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">Count</span>
-                        <span class="stat-value">${result.corrections.count}</span>
+                        <span class="stat-label">Correction Count</span>
+                        <span class="stat-value">${result.corrections.count || 0}</span>
                     </div>
                 </div>
             `;
@@ -373,6 +445,7 @@ function displayTranscriptionResult(result, mode) {
                 <div class="result-section">
                     <h4><i class="fas fa-save"></i> Case Recorded</h4>
                     <p class="text-muted">Case ID: <code>${result.case_id}</code></p>
+                    <p class="text-muted">This error case will be used for fine-tuning the model.</p>
                 </div>
             `;
         }
@@ -383,12 +456,19 @@ function displayTranscriptionResult(result, mode) {
             <h4><i class="fas fa-clock"></i> Performance</h4>
             <div class="stat-row">
                 <span class="stat-label">Inference Time</span>
-                <span class="stat-value">${result.inference_time_seconds.toFixed(2)}s</span>
+                <span class="stat-value">${(result.inference_time_seconds || 0).toFixed(2)}s</span>
             </div>
         </div>
     `;
     
-    container.innerHTML = html;
+    // Append additional info after the transcripts comparison
+    const comparisonSection = container.querySelector('.transcripts-comparison');
+    if (comparisonSection) {
+        comparisonSection.insertAdjacentHTML('afterend', html);
+    } else {
+        container.insertAdjacentHTML('beforeend', html);
+    }
+    
     container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 

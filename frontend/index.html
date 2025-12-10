@@ -142,27 +142,44 @@
 
                             <div class="transcribe-options">
                                 <h4>Transcription Options</h4>
+                                
+                                <div class="form-group">
+                                    <label for="model-selector">Select STT Model</label>
+                                    <select id="model-selector" class="filter-select">
+                                        <option value="gemma-base-v1">Gemma Base v1 (Original - Poor Performance)</option>
+                                        <option value="gemma-finetuned-v2">Gemma Fine-tuned v2 (Improved)</option>
+                                        <option value="gemma-finetuned-v3">Gemma Fine-tuned v3 (Best Performance)</option>
+                                    </select>
+                                    <small class="text-muted">Select the STT model version to use for transcription</small>
+                                </div>
+
                                 <div class="option-group">
                                     <label class="radio-label">
-                                        <input type="radio" name="transcribe-mode" value="baseline" checked>
-                                        <span>Baseline (Fast)</span>
-                                        <small>Simple transcription without error detection</small>
-                                    </label>
-                                    <label class="radio-label">
-                                        <input type="radio" name="transcribe-mode" value="agent">
+                                        <input type="radio" name="transcribe-mode" value="agent" checked>
                                         <span>Agent (Recommended)</span>
                                         <small>With error detection and auto-correction</small>
+                                    </label>
+                                    <label class="radio-label">
+                                        <input type="radio" name="transcribe-mode" value="baseline">
+                                        <span>Baseline (Fast)</span>
+                                        <small>Simple transcription without error detection</small>
                                     </label>
                                 </div>
 
                                 <div class="option-group" id="agent-options" style="display: none;">
                                     <label class="checkbox-label">
                                         <input type="checkbox" id="auto-correction" checked>
-                                        <span>Enable Auto-Correction</span>
+                                        <div>
+                                            <span><strong>Enable Auto-Correction</strong></span>
+                                            <small>When ON: LLM detects errors AND applies corrections (shows refined transcript). When OFF: LLM only detects errors but doesn't correct them (shows original transcript with errors).</small>
+                                        </div>
                                     </label>
                                     <label class="checkbox-label">
                                         <input type="checkbox" id="record-errors" checked>
-                                        <span>Record Errors Automatically</span>
+                                        <div>
+                                            <span><strong>Record Errors Automatically</strong></span>
+                                            <small>When ON: Failed cases (original + corrected transcripts) are automatically saved to the data management system for future fine-tuning. When OFF: Errors are detected but not saved. This is essential for the self-learning pipeline.</small>
+                                        </div>
                                     </label>
                                 </div>
                             </div>
@@ -174,6 +191,20 @@
 
                         <div id="transcription-result" class="transcription-result hidden">
                             <!-- Results will be displayed here -->
+                            <div class="transcripts-comparison">
+                                <div class="transcript-column">
+                                    <h4><i class="fas fa-microphone-alt"></i> STT Original Transcript</h4>
+                                    <div class="transcript-box" id="stt-original-transcript">
+                                        <p class="text-muted">Transcription will appear here...</p>
+                                    </div>
+                                </div>
+                                <div class="transcript-column">
+                                    <h4><i class="fas fa-magic"></i> LLM Refined Transcript (Gold Standard)</h4>
+                                    <div class="transcript-box" id="llm-refined-transcript">
+                                        <p class="text-muted">Refined transcription will appear here...</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
