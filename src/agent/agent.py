@@ -52,21 +52,21 @@ class STTAgent:
         self.error_detector = ErrorDetector(min_confidence_threshold=error_threshold)
         self.self_learner = SelfLearner()  # In-memory tracking only
         
-        # Initialize Gemma LLM corrector if requested
+        # Initialize LLM corrector if requested
         self.llm_corrector = None
         if use_llm_correction:
             try:
                 self.llm_corrector = GemmaLLMCorrector(
-                    model_name=llm_model_name or "google/gemma-2b-it",
+                    model_name=llm_model_name or "mistralai/Mistral-7B-Instruct-v0.3",
                     use_quantization=use_quantization
                 )
                 if self.llm_corrector.is_available():
-                    logger.info("✅ Gemma LLM corrector initialized successfully")
+                    logger.info("✅ LLM corrector initialized successfully")
                 else:
-                    logger.warning("⚠️  Gemma LLM not available, using rule-based correction only")
+                    logger.warning("⚠️  LLM not available, using rule-based correction only")
                     self.llm_corrector = None
             except Exception as e:
-                logger.warning(f"⚠️  Failed to initialize Gemma LLM: {e}. Using rule-based correction only.")
+                logger.warning(f"⚠️  Failed to initialize LLM: {e}. Using rule-based correction only.")
                 self.llm_corrector = None
         
         # Initialize adaptive scheduler and fine-tuner (Week 3)

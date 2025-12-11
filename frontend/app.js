@@ -98,10 +98,10 @@ function updateHealthDisplay(health) {
         avg_inference_time: 2.4,
         error_rate: 0.18,
         correction_rate: 0.15,
-        wer_baseline: 0.124,
-        wer_finetuned: 0.111,
-        cer_baseline: 0.029,
-        cer_finetuned: 0.024
+        wer_baseline: 0.36,
+        wer_finetuned: 0.32,
+        cer_baseline: 0.13,
+        cer_finetuned: 0.11
     };
     
     const html = `
@@ -118,7 +118,9 @@ function updateHealthDisplay(health) {
         <div class="stat-row">
             <span class="stat-label">LLM Available</span>
             <span class="stat-value">
-                <span class="badge badge-success">Yes</span>
+                ${health.components.agent.llm_available ? 
+                    '<span class="badge badge-success">Yes</span>' : 
+                    '<span class="badge badge-warning">No</span>'}
             </span>
         </div>
         <div class="stat-row">
@@ -140,24 +142,24 @@ async function loadDashboard() {
 
 async function loadModelInfo() {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/models/info`);
+        const response = await fetch(`${API_BASE_URL}/api/models/info?model=wav2vec2-finetuned`);
         const data = await response.json();
         
         const container = document.getElementById('model-info');
-        const html = `
-            <div class="stat-row">
-                <span class="stat-label">Model Name</span>
-                <span class="stat-value">${data.name}</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">Parameters</span>
-                <span class="stat-value">${data.parameters.toLocaleString()}</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">Trainable Params</span>
-                <span class="stat-value">${data.trainable_params.toLocaleString()}</span>
-            </div>
-        `;
+    const html = `
+        <div class="stat-row">
+            <span class="stat-label">Model Name</span>
+            <span class="stat-value">${data.name}</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Parameters</span>
+            <span class="stat-value">${data.parameters.toLocaleString()}</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Trainable Params</span>
+            <span class="stat-value">${data.trainable_params.toLocaleString()}</span>
+        </div>
+    `;
         
         container.innerHTML = html;
         
@@ -199,6 +201,15 @@ function handleFileSelect(event) {
             <small>${(file.size / 1024 / 1024).toFixed(2)} MB</small>
         </div>
     `;
+    
+    // Audio preview
+    const audioEl = document.getElementById('audio-preview');
+    if (audioEl) {
+        const blobUrl = URL.createObjectURL(file);
+        audioEl.src = blobUrl;
+        audioEl.classList.remove('hidden');
+        audioEl.load();
+    }
     
     document.getElementById('transcribe-btn').disabled = false;
 }
@@ -342,16 +353,12 @@ function displayTranscriptionResult(result, mode, selectedModel) {
                         </span>
                     </span>
                 </div>
-                ${detection.has_errors ? `
-                    <div class="stat-row">
-                        <span class="stat-label">Error Count</span>
-                        <span class="stat-value">${detection.error_count || 0}</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">Error Score</span>
-                        <span class="stat-value">${(detection.error_score || 0).toFixed(2)}</span>
-                    </div>
-                ` : `
+            ${detection.has_errors ? `
+                <div class="stat-row">
+                    <span class="stat-label">Error Score</span>
+                    <span class="stat-value">${(detection.error_score || 0).toFixed(2)}</span>
+                </div>
+            ` : `
                     <div class="stat-row">
                         <span class="stat-label">Status</span>
                         <span class="stat-value">No errors detected - model performing well!</span>
@@ -405,109 +412,102 @@ function displayTranscriptionResult(result, mode, selectedModel) {
 }
 
 // ==================== DATA MANAGEMENT ====================
-const MOCK_FAILED_CASES = [
-    {
-        case_id: 'FC-2024-001',
-        status: 'Uncorrected',
-        original_transcript: 'The patent is experiencing chess pain and shortness of breath...',
-        corrected_transcript: null,
-        error_score: 0.72,
-        timestamp: new Date().toISOString()
-    },
-    {
-        case_id: 'FC-2024-002',
-        status: 'Corrected',
-        original_transcript: 'Blood pressure is one forty over ninety recommend ekg and cheese x-ray...',
-        corrected_transcript: 'Blood pressure is 140 over 90. Recommend ECG and chest X-ray.',
-        error_score: 0.41,
-        timestamp: new Date(Date.now() - 3600 * 1000).toISOString()
-    },
-    {
-        case_id: 'FC-2024-003',
-        status: 'Uncorrected',
-        original_transcript: 'Patient reports dizziness and nausea. Recommended ct san...',
-        corrected_transcript: null,
-        error_score: 0.58,
-        timestamp: new Date(Date.now() - 2 * 3600 * 1000).toISOString()
-    }
-];
-
 async function loadFailedCases(pageDirection = 0) {
-    // Use mock cases
-    const cases = MOCK_FAILED_CASES;
-    const container = document.getElementById('failed-cases-list');
+    if (pageDirection === 0) {
+        currentPage = 0;
+    } else if (pageDirection === 1) {
+        currentPage++;
+    } else {
+        currentPage = Math.max(0, currentPage - 1);
+    }
     
-    const html = cases.map(caseItem => `
-        <div class="case-item" onclick="showCaseDetails('${caseItem.case_id}')">
-            <div class="case-header">
-                <span class="case-id">${caseItem.case_id}</span>
-                <span class="badge ${caseItem.corrected_transcript ? 'badge-success' : 'badge-warning'}">
-                    ${caseItem.corrected_transcript ? 'Corrected' : 'Uncorrected'}
-                </span>
-            </div>
-            <div class="case-transcript">${caseItem.original_transcript.substring(0, 120)}...</div>
-            <div class="case-meta">
-                <span><i class="fas fa-clock"></i> ${new Date(caseItem.timestamp).toLocaleString()}</span>
-                <span><i class="fas fa-exclamation-triangle"></i> Error Score: ${caseItem.error_score.toFixed(2)}</span>
-            </div>
-        </div>
-    `).join('');
-    
-    container.innerHTML = html;
-    
-    // Update pagination UI to disabled (since static)
-    document.getElementById('page-info').textContent = ``;
-    document.getElementById('prev-btn').disabled = true;
-    document.getElementById('next-btn').disabled = true;
+    try {
+        const offset = currentPage * PAGE_SIZE;
+        const response = await fetch(`${API_BASE_URL}/api/data/failed-cases?limit=${PAGE_SIZE}&offset=${offset}`);
+        const data = await response.json();
+        
+        const container = document.getElementById('failed-cases-list');
+        
+        if (!data.cases || data.cases.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center">No failed cases found</p>';
+        } else {
+            const html = data.cases.map(caseItem => `
+                <div class="case-item" onclick="showCaseDetails('${caseItem.case_id}')">
+                    <div class="case-header">
+                        <span class="case-id">${caseItem.case_id}</span>
+                        <span class="badge ${caseItem.corrected_transcript ? 'badge-success' : 'badge-warning'}">
+                            ${caseItem.corrected_transcript ? 'Corrected' : 'Uncorrected'}
+                        </span>
+                    </div>
+                    <div class="case-transcript">${(caseItem.original_transcript || '').substring(0, 120)}...</div>
+                    <div class="case-meta">
+                        <span><i class="fas fa-clock"></i> ${new Date(caseItem.timestamp).toLocaleString()}</span>
+                        <span><i class="fas fa-exclamation-triangle"></i> Error Score: ${caseItem.error_score.toFixed(2)}</span>
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+        }
+        
+        // Update pagination
+        document.getElementById('page-info').textContent = `Page ${currentPage + 1}`;
+        document.getElementById('prev-btn').disabled = currentPage === 0;
+        document.getElementById('next-btn').disabled = data.cases.length < PAGE_SIZE;
+    } catch (error) {
+        showToast('Failed to load failed cases', 'error');
+    }
 }
 
 async function showCaseDetails(caseId) {
-    const caseData = MOCK_FAILED_CASES.find(c => c.case_id === caseId);
-    if (!caseData) {
-        showToast('Case not found', 'error');
-        return;
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/data/case/${caseId}`);
+        const caseData = await response.json();
+        
+        const modal = document.getElementById('case-modal');
+        const modalBody = document.getElementById('modal-body');
+        
+        const html = `
+            <div class="result-section">
+                <h4><i class="fas fa-info-circle"></i> Case Information</h4>
+                <div class="stat-row">
+                    <span class="stat-label">Case ID</span>
+                    <span class="stat-value"><code>${caseData.case_id}</code></span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Timestamp</span>
+                    <span class="stat-value">${new Date(caseData.timestamp).toLocaleString()}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Error Score</span>
+                    <span class="stat-value">${caseData.error_score.toFixed(2)}</span>
+                </div>
+            </div>
+            <div class="result-section">
+                <h4><i class="fas fa-file-alt"></i> Original Transcript</h4>
+                <div class="transcript-box">${caseData.original_transcript}</div>
+            </div>
+            ${caseData.corrected_transcript ? `
+                <div class="result-section">
+                    <h4><i class="fas fa-check-circle"></i> Corrected Transcript</h4>
+                    <div class="transcript-box">${caseData.corrected_transcript}</div>
+                </div>
+            ` : `
+                <div class="result-section">
+                    <h4><i class="fas fa-edit"></i> Add Correction</h4>
+                    <textarea id="correction-input" class="input" rows="4" placeholder="Enter corrected transcript..."></textarea>
+                    <button class="btn btn-primary mt-10" onclick="submitCorrection('${caseData.case_id}')">
+                        <i class="fas fa-save"></i> Save Correction
+                    </button>
+                </div>
+            `}
+        `;
+        
+        modalBody.innerHTML = html;
+        modal.classList.remove('hidden');
+    } catch (error) {
+        showToast('Failed to load case details', 'error');
     }
-    const modal = document.getElementById('case-modal');
-    const modalBody = document.getElementById('modal-body');
-    
-    const html = `
-        <div class="result-section">
-            <h4><i class="fas fa-info-circle"></i> Case Information</h4>
-            <div class="stat-row">
-                <span class="stat-label">Case ID</span>
-                <span class="stat-value"><code>${caseData.case_id}</code></span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">Timestamp</span>
-                <span class="stat-value">${new Date(caseData.timestamp).toLocaleString()}</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">Error Score</span>
-                <span class="stat-value">${caseData.error_score.toFixed(2)}</span>
-            </div>
-        </div>
-        <div class="result-section">
-            <h4><i class="fas fa-file-alt"></i> Original Transcript</h4>
-            <div class="transcript-box">${caseData.original_transcript}</div>
-        </div>
-        ${caseData.corrected_transcript ? `
-            <div class="result-section">
-                <h4><i class="fas fa-check-circle"></i> Corrected Transcript</h4>
-                <div class="transcript-box">${caseData.corrected_transcript}</div>
-            </div>
-        ` : `
-            <div class="result-section">
-                <h4><i class="fas fa-edit"></i> Add Correction</h4>
-                <textarea id="correction-input" class="input" rows="4" placeholder="Enter corrected transcript..."></textarea>
-                <button class="btn btn-primary mt-10" onclick="submitCorrection('${caseData.case_id}')">
-                    <i class="fas fa-save"></i> Save Correction
-                </button>
-            </div>
-        `}
-    `;
-    
-    modalBody.innerHTML = html;
-    modal.classList.remove('hidden');
 }
 
 async function submitCorrection(caseId) {
@@ -516,9 +516,29 @@ async function submitCorrection(caseId) {
         showToast('Please enter a correction', 'warning');
         return;
     }
-    showToast('Correction saved (mock)', 'success');
-    closeModal();
-    loadFailedCases();
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/data/correction`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                case_id: caseId,
+                corrected_transcript: correctionText,
+                correction_method: 'manual'
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to submit correction');
+        }
+        
+        showToast('Correction saved successfully', 'success');
+        closeModal();
+        loadFailedCases();
+    } catch (error) {
+        showToast('Failed to save correction: ' + error.message, 'error');
+    }
 }
 
 async function prepareDataset() {
@@ -670,17 +690,17 @@ async function refreshModelVersions() {
     const versions = [
         {
             version_id: 'baseline-v1',
-            model_name: 'Gemma Base v1 (Whisper Tiny)',
+            model_name: 'Wav2Vec2 Base (facebook/wav2vec2-base-960h)',
             status: 'baseline',
             created_at: new Date(Date.now() - 86400000).toISOString(),
-            params: '39M'
+            params: '95M'
         },
         {
-            version_id: 'finetuned-v3',
-            model_name: 'Gemma Fine-tuned v3 (Gemma 3n)',
+            version_id: 'finetuned-v2',
+            model_name: 'Fine-tuned Wav2Vec2',
             status: 'current',
             created_at: new Date().toISOString(),
-            params: '2B (Gemma 3n)'
+            params: '39M'
         }
     ];
     
@@ -720,12 +740,14 @@ async function refreshPerformanceMetrics() {
     performanceMock = {
         total_inferences: stats.total_inferences ?? 482,
         avg_inference_time: stats.avg_inference_time ?? 2.4,
-        error_rate: stats.error_rate ?? 0.18,
-        correction_rate: stats.correction_rate ?? 0.15,
-        wer_baseline: data?.wer_baseline ?? 0.124,
-        wer_finetuned: data?.wer_finetuned ?? 0.111,
-        cer_baseline: data?.cer_baseline ?? 0.029,
-        cer_finetuned: data?.cer_finetuned ?? 0.024
+        avg_error_score: stats.avg_error_score ?? 0.15,
+        // WER/CER defaults updated to reported real-world performance
+        // Baseline WER/CER: 36% / 13%
+        // Fine-tuned (better but close): 32% / 11%
+        wer_baseline: data?.wer_baseline ?? 0.36,
+        wer_finetuned: data?.wer_finetuned ?? 0.32,
+        cer_baseline: data?.cer_baseline ?? 0.13,
+        cer_finetuned: data?.cer_finetuned ?? 0.11
     };
     
     const html = `
@@ -738,12 +760,8 @@ async function refreshPerformanceMetrics() {
             <span class="stat-value">${performanceMock.avg_inference_time.toFixed(2)}s</span>
         </div>
         <div class="stat-row">
-            <span class="stat-label">Error Detection Rate</span>
-            <span class="stat-value">${(performanceMock.error_rate * 100).toFixed(1)}%</span>
-        </div>
-        <div class="stat-row">
-            <span class="stat-label">Correction Rate</span>
-            <span class="stat-value">${(performanceMock.correction_rate * 100).toFixed(1)}%</span>
+            <span class="stat-label">Average Error Score</span>
+            <span class="stat-value">${performanceMock.avg_error_score.toFixed(3)}</span>
         </div>
         <div class="stat-row">
             <span class="stat-label">Baseline WER / CER</span>

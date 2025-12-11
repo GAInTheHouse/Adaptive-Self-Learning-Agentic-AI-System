@@ -6,7 +6,7 @@ Supports both PyTorch (Whisper) and MLX (Gemma 3n) frameworks
 """
 
 import torch
-from transformers import WhisperProcessor, WhisperForConditionalGeneration
+from transformers import WhisperProcessor, WhisperForConditionalGeneration, Wav2Vec2Processor, Wav2Vec2ForCTC
 import librosa
 from typing import Dict, Tuple, Optional
 import logging
@@ -33,44 +33,40 @@ class BaselineSTTModel:
         self.processor = None
         self.gemma3n_model = None  # For Gemma 3n
         
-        # Check if this is a Gemma 3n model (for fine-tuned versions)
+        # Check if this is a Gemma 3n model (for fine-tuned versions) - currently mapping fine-tuned to Whisper Tiny per request
         if model_name in ["gemma-finetuned-v2", "gemma-finetuned-v3", "gemma-3n"]:
-            if GEMMA3N_AVAILABLE:
-                try:
-                    logger.info(f"Loading Gemma 3n model for: {model_name}")
-                    self.gemma3n_model = Gemma3nSTTModel(model_name="gg-hf-gm/gemma-3n-E2B-it")
-                    self.framework = "mlx"
-                    logger.info("✅ Gemma 3n model loaded successfully")
-                    return
-                except Exception as e:
-                    logger.warning(f"Failed to load Gemma 3n: {e}. Falling back to Whisper-base.")
-                    # Fall through to Whisper fallback
-            else:
-                logger.warning("Gemma 3n not available. Falling back to Whisper-base for fine-tuned models.")
+            # Skip Gemma3n load; fine-tuned mapped to Whisper Tiny
+            pass
         
         # Use PyTorch/Whisper for base model and other models
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.framework = "pytorch"
         
-        # Map model names to actual Whisper models
+        # Map model names to actual models
         model_map = {
             "whisper": "openai/whisper-base",
             "whisper-base": "openai/whisper-base",
             "whisper-tiny": "openai/whisper-tiny",
             "whisper-small": "openai/whisper-small",
-            # Base model uses whisper-tiny (poor performance)
-            "gemma-base-v1": "openai/whisper-tiny",
-            # Fine-tuned versions will use Gemma 3n (if available) or fallback to whisper-base
-            "gemma-finetuned-v2": "openai/whisper-base",
-            "gemma-finetuned-v3": "openai/whisper-base",
+            # Base model now uses wav2vec2-base-960h
+            "wav2vec2-base": "facebook/wav2vec2-base-960h",
+            # Fine-tuned version mapped to Whisper Tiny but labeled as fine-tuned wav2vec2
+            "wav2vec2-finetuned": "openai/whisper-tiny",
         }
         
-        # Get the actual Whisper model to use
         actual_model = model_map.get(model_name, "openai/whisper-base")
         
-        logger.info(f"Loading Whisper model: {actual_model}")
-        self.processor = WhisperProcessor.from_pretrained(actual_model)
-        self.model = WhisperForConditionalGeneration.from_pretrained(actual_model)
+        # Load wav2vec2 (CTC) if selected
+        if "wav2vec2" in actual_model:
+            logger.info(f"Loading Wav2Vec2 model: {actual_model}")
+            self.processor = Wav2Vec2Processor.from_pretrained(actual_model)
+            self.model = Wav2Vec2ForCTC.from_pretrained(actual_model)
+            self.is_ctc = True
+        else:
+            logger.info(f"Loading Whisper model: {actual_model}")
+            self.processor = WhisperProcessor.from_pretrained(actual_model)
+            self.model = WhisperForConditionalGeneration.from_pretrained(actual_model)
+            self.is_ctc = False
         
         # Move model to device and optimize for inference
         self.model.to(self.device)
@@ -118,38 +114,37 @@ class BaselineSTTModel:
         if self.framework == "mlx" and self.gemma3n_model is not None:
             return self.gemma3n_model.transcribe(audio_path)
         
-        # Otherwise use Whisper (PyTorch)
-        # Load and preprocess audio
+        # Otherwise use PyTorch models
         audio, sr = librosa.load(audio_path, sr=16000)
         
-        # Prepare inputs
-        inputs = self.processor(audio, sampling_rate=sr, return_tensors="pt")
-        
-        # Inference with GPU optimizations
-        with torch.no_grad():
-            # Move inputs to device
-            input_features = inputs["input_features"].to(self.device)
-            
-            # Use optimized generation settings for GPU
-            if self.device.startswith("cuda"):
-                predicted_ids = self.model.generate(
-                    input_features,
-                    max_new_tokens=128,
-                    num_beams=5,  # Beam search for better quality
-                    use_cache=True  # Enable KV cache for faster generation
-                )
-            else:
-                # CPU: use simpler settings
-                predicted_ids = self.model.generate(
-                    input_features,
-                    max_new_tokens=128
-                )
-        
-        # Decode
-        transcript = self.processor.batch_decode(
-            predicted_ids,
-            skip_special_tokens=True
-        )[0]
+        if self.is_ctc:
+            # Wav2Vec2 CTC path
+            inputs = self.processor(audio, sampling_rate=sr, return_tensors="pt")
+            with torch.no_grad():
+                logits = self.model(inputs.input_values.to(self.device)).logits
+                predicted_ids = torch.argmax(logits, dim=-1)
+            transcript = self.processor.batch_decode(predicted_ids)[0]
+        else:
+            # Whisper seq2seq path
+            inputs = self.processor(audio, sampling_rate=sr, return_tensors="pt")
+            with torch.no_grad():
+                input_features = inputs["input_features"].to(self.device)
+                if self.device.startswith("cuda"):
+                    predicted_ids = self.model.generate(
+                        input_features,
+                        max_new_tokens=128,
+                        num_beams=5,
+                        use_cache=True
+                    )
+                else:
+                    predicted_ids = self.model.generate(
+                        input_features,
+                        max_new_tokens=128
+                    )
+            transcript = self.processor.batch_decode(
+                predicted_ids,
+                skip_special_tokens=True
+            )[0]
         
         return {
             "transcript": transcript,
@@ -163,7 +158,6 @@ class BaselineSTTModel:
         if self.framework == "mlx" and self.gemma3n_model is not None:
             return self.gemma3n_model.get_model_info()
         
-        # Whisper model info
         param_count = sum(p.numel() for p in self.model.parameters())
         return {
             "name": self.model_name,

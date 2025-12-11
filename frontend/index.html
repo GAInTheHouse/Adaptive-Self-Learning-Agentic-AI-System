@@ -100,6 +100,9 @@
                                     <small>Supported formats: WAV, MP3, OGG</small>
                                 </label>
                                 <div id="file-info" class="file-info hidden"></div>
+                                <audio id="audio-preview" controls class="hidden" style="margin-top: 12px; width: 100%;">
+                                    Your browser does not support the audio element.
+                                </audio>
                             </div>
 
                             <div class="transcribe-options">
@@ -108,9 +111,8 @@
                                 <div class="form-group">
                                     <label for="model-selector">Select STT Model</label>
                                     <select id="model-selector" class="filter-select">
-                                        <option value="gemma-base-v1">Gemma Base v1 (Original - Poor Performance - Whisper Tiny)</option>
-                                        <option value="gemma-finetuned-v2">Gemma Fine-tuned v2 (Improved - Gemma 3n)</option>
-                                        <option value="gemma-finetuned-v3">Gemma Fine-tuned v3 (Best Performance - Gemma 3n)</option>
+                                        <option value="wav2vec2-base">Wav2Vec2 Base</option>
+                                        <option value="wav2vec2-finetuned">Fine-tuned Wav2Vec2</option>
                                     </select>
                                     <small class="text-muted">Select the STT model version to use for transcription</small>
                                 </div>

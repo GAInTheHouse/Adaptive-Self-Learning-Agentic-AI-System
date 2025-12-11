@@ -21,9 +21,9 @@ class GemmaLLMCorrector:
     
     def __init__(
         self,
-        model_name: str = "google/gemma-2b-it",  # Using instruction-tuned version
+        model_name: str = "mistralai/Mistral-7B-Instruct-v0.3",  # Default to Mistral 7B Instruct
         device: Optional[str] = None,
-        use_quantization: bool = False
+        use_quantization: bool = True
     ):
         """
         Initialize Gemma LLM corrector.
@@ -37,9 +37,14 @@ class GemmaLLMCorrector:
         self.model_name = model_name
         self.use_quantization = use_quantization
         
-        logger.info(f"Loading Gemma LLM: {model_name} on {self.device}")
+        logger.info(f"Loading LLM: {model_name} on {self.device}")
         
         try:
+            can_quantize = use_quantization and torch.cuda.is_available()
+            if use_quantization and not torch.cuda.is_available():
+                logger.warning("Quantization requested but CUDA not available; falling back to non-quantized load.")
+                can_quantize = False
+
             # Load tokenizer
             self.tokenizer = AutoTokenizer.from_pretrained(
                 model_name,
@@ -47,11 +52,12 @@ class GemmaLLMCorrector:
             )
             
             # Load model with optional quantization
-            if use_quantization and self.device.startswith("cuda"):
+            if can_quantize:
                 from transformers import BitsAndBytesConfig
                 quantization_config = BitsAndBytesConfig(
                     load_in_8bit=True,
-                    llm_int8_threshold=6.0
+                    llm_int8_threshold=6.0,
+                    bnb_4bit_compute_dtype=torch.bfloat16
                 )
                 self.model = AutoModelForCausalLM.from_pretrained(
                     model_name,
@@ -62,13 +68,13 @@ class GemmaLLMCorrector:
             else:
                 self.model = AutoModelForCausalLM.from_pretrained(
                     model_name,
-                    trust_remote_code=True
+                    trust_remote_code=True,
+                    device_map="auto"
                 )
-                self.model.to(self.device)
             
             self.model.eval()  # Inference mode
             
-            logger.info(f"✅ Gemma LLM loaded successfully on {self.device}")
+            logger.info(f"✅ LLM loaded successfully on {self.device}")
             
         except Exception as e:
             logger.error(f"Failed to load Gemma model: {e}")
@@ -150,21 +156,24 @@ class GemmaLLMCorrector:
         
         error_list = "\n".join(error_summary) if error_summary else "No specific errors detected, but text may need improvement."
         
-        prompt = f"""You are a helpful assistant that corrects speech-to-text transcription errors. 
+        prompt = f"""You are a careful, concise transcription corrector for the medical domain.
 
-Original transcript: "{transcript}"
+Original transcript (medical context; may contain misspellings or nonsense words):
+"{transcript}"
 
 Detected issues:
 {error_list}
 
-Please provide a corrected version of the transcript that:
-1. Fixes any obvious errors (repeated characters, capitalization issues, etc.)
-2. Maintains the original meaning and content
-3. Improves readability and naturalness
-4. Adds appropriate punctuation if missing
-5. Preserves proper nouns and technical terms
+Requirements:
+- Output exactly one corrected sentence (no lists, no explanations).
+- Make the sentence fluent, grammatical English, and keep it clearly medical in meaning.
+- If words look garbled, infer the most plausible intended medical terms.
+- Preserve the original meaning and clinical context; keep medical terminology if possible.
+- Fix capitalization and punctuation.
+- Ensure at least one change from the original if the original is garbled.
+- Do NOT add a prefix/suffix; return only the corrected sentence.
 
-Corrected transcript:"""
+Corrected sentence:"""
         
         return prompt
     
@@ -185,16 +194,17 @@ Corrected transcript:"""
             return_tensors="pt",
             truncation=True,
             max_length=1024
-        ).to(self.device)
+        )
+        # Ensure inputs are on the same device as the model (handles mps/cuda/cpu)
+        inputs = inputs.to(self.model.device)
         
         # Generate
         with torch.no_grad():
             outputs = self.model.generate(
                 **inputs,
                 max_new_tokens=max_length,
-                temperature=0.3,  # Lower temperature for more deterministic corrections
-                do_sample=True,
-                top_p=0.9,
+                temperature=0.2,  # more deterministic
+                do_sample=False,
                 pad_token_id=self.tokenizer.eos_token_id
             )
         
@@ -208,8 +218,14 @@ Corrected transcript:"""
         corrected_text = generated_text.strip()
         
         # Remove any prompt-like artifacts
-        corrected_text = re.sub(r'^Corrected transcript:\s*', '', corrected_text, flags=re.IGNORECASE)
+        corrected_text = re.sub(r'^(Corrected (transcript|sentence):)\s*', '', corrected_text, flags=re.IGNORECASE)
         corrected_text = corrected_text.strip()
+        
+        # If multiple lines, keep the first meaningful line
+        if "\n" in corrected_text:
+            lines = [ln.strip() for ln in corrected_text.splitlines() if ln.strip()]
+            if lines:
+                corrected_text = lines[0]
         
         return corrected_text
     
