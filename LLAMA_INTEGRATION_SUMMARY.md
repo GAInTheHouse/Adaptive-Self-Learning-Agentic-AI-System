@@ -23,7 +23,7 @@ Gemma LLM has been successfully integrated into the agent system for intelligent
    - Added `use_llm_correction`, `llm_model_name`, `use_quantization` parameters
 
 2. **`src/agent/__init__.py`**
-   - Exported `GemmaLLMCorrector` class
+   - Exported `LlamaLLMCorrector` class
 
 3. **`src/agent_api.py`**
    - Updated to initialize agent with LLM support

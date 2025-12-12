@@ -1,86 +1,60 @@
 """
-LLM-based Error Corrector - Gemma Integration
-Uses Gemma LLM for intelligent error correction and text improvement
+LLM-based Error Corrector - Ollama Integration
+Uses Ollama with Llama 2/3 models for intelligent error correction and text improvement
 """
 
 import logging
-import torch
+import time
 from typing import Dict, Optional, List
-from transformers import AutoTokenizer, AutoModelForCausalLM
 import re
+
+from .ollama_llm import OllamaLLM
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class GemmaLLMCorrector:
+class LlamaLLMCorrector:
     """
-    LLM-based error corrector using Google's Gemma model.
+    LLM-based error corrector using Ollama with Llama 2/3 models.
     Provides intelligent error correction and text improvement for STT transcripts.
     """
     
     def __init__(
         self,
-        model_name: str = "mistralai/Mistral-7B-Instruct-v0.3",  # Default to Mistral 7B Instruct
+        model_name: str = "llama3.2:3b",  # Default to Ollama Llama 3.2 3B
+        ollama_base_url: str = "http://localhost:11434",
         device: Optional[str] = None,
-        use_quantization: bool = True
+        use_quantization: bool = False,  # Not used for Ollama, kept for compatibility
+        fast_mode: bool = True  # Not used for Ollama, kept for compatibility
     ):
         """
-        Initialize Gemma LLM corrector.
+        Initialize Ollama LLM corrector.
         
         Args:
-            model_name: HuggingFace model name for Gemma
-            device: Device to run on ('cuda', 'cpu', or None for auto)
-            use_quantization: Whether to use 8-bit quantization (saves memory)
+            model_name: Ollama model name (e.g., "llama3.2:3b", "llama3.1:8b", "llama2:7b")
+            ollama_base_url: Ollama server URL (default: http://localhost:11434)
+            device: Not used for Ollama (kept for compatibility)
+            use_quantization: Not used for Ollama (kept for compatibility)
+            fast_mode: Not used for Ollama (kept for compatibility)
         """
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.model_name = model_name
-        self.use_quantization = use_quantization
+        self.ollama_base_url = ollama_base_url
+        self.device = device  # Kept for compatibility
+        self.use_quantization = use_quantization  # Kept for compatibility
+        self.fast_mode = fast_mode  # Kept for compatibility
         
-        logger.info(f"Loading LLM: {model_name} on {self.device}")
+        logger.info(f"Initializing Ollama LLM corrector with model: {model_name}")
         
         try:
-            can_quantize = use_quantization and torch.cuda.is_available()
-            if use_quantization and not torch.cuda.is_available():
-                logger.warning("Quantization requested but CUDA not available; falling back to non-quantized load.")
-                can_quantize = False
-
-            # Load tokenizer
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                model_name,
-                trust_remote_code=True
+            self.ollama = OllamaLLM(
+                model_name=model_name,
+                base_url=ollama_base_url
             )
-            
-            # Load model with optional quantization
-            if can_quantize:
-                from transformers import BitsAndBytesConfig
-                quantization_config = BitsAndBytesConfig(
-                    load_in_8bit=True,
-                    llm_int8_threshold=6.0,
-                    bnb_4bit_compute_dtype=torch.bfloat16
-                )
-                self.model = AutoModelForCausalLM.from_pretrained(
-                    model_name,
-                    quantization_config=quantization_config,
-                    device_map="auto",
-                    trust_remote_code=True
-                )
-            else:
-                self.model = AutoModelForCausalLM.from_pretrained(
-                    model_name,
-                    trust_remote_code=True,
-                    device_map="auto"
-                )
-            
-            self.model.eval()  # Inference mode
-            
-            logger.info(f"✅ LLM loaded successfully on {self.device}")
-            
+            logger.info(f"✅ Ollama LLM corrector initialized successfully with model: {model_name}")
         except Exception as e:
-            logger.error(f"Failed to load Gemma model: {e}")
-            logger.warning("Falling back to rule-based correction only")
-            self.model = None
-            self.tokenizer = None
+            logger.error(f"Failed to initialize Ollama LLM: {e}")
+            raise  # Fail and alert if Ollama is not available
     
     def correct_transcript(
         self,
@@ -89,7 +63,7 @@ class GemmaLLMCorrector:
         context: Optional[Dict] = None
     ) -> Dict[str, any]:
         """
-        Use Gemma LLM to intelligently correct transcript errors.
+        Use Ollama LLM to intelligently correct transcript errors.
         
         Args:
             transcript: Original transcript with errors
@@ -99,8 +73,8 @@ class GemmaLLMCorrector:
         Returns:
             Dictionary with corrected transcript and metadata
         """
-        if not self.model or not self.tokenizer:
-            logger.warning("Gemma model not available, skipping LLM correction")
+        if not self.ollama or not self.ollama.is_available():
+            logger.warning("Ollama LLM not available, skipping LLM correction")
             return {
                 "corrected_transcript": transcript,
                 "correction_method": "none",
@@ -108,17 +82,30 @@ class GemmaLLMCorrector:
             }
         
         try:
-            # Build prompt for Gemma
+            # Build prompt for Llama
             prompt = self._build_correction_prompt(transcript, errors, context)
             
-            # Generate correction
+            # Generate correction with timing
+            start_time = time.time()
             corrected_text = self._generate_correction(prompt)
+            inference_time = time.time() - start_time
+            
+            logger.info(f"LLM inference time: {inference_time:.2f}s")
+            
+            # If LLM returned the same text (case-insensitive), it means transcript was already correct
+            # Normalize for comparison (lowercase, strip whitespace)
+            original_normalized = transcript.strip().lower()
+            corrected_normalized = corrected_text.strip().lower()
+            
+            if original_normalized == corrected_normalized:
+                logger.debug("LLM returned unchanged transcript - original was already correct")
             
             return {
                 "corrected_transcript": corrected_text,
-                "correction_method": "gemma_llm",
+                "correction_method": "ollama_llm",
                 "llm_used": True,
                 "original_transcript": transcript,
+                "inference_time_seconds": inference_time,
                 "prompt_used": prompt[:200] + "..." if len(prompt) > 200 else prompt
             }
             
@@ -138,7 +125,7 @@ class GemmaLLMCorrector:
         context: Optional[Dict] = None
     ) -> str:
         """
-        Build a prompt for Gemma to correct the transcript.
+        Build a prompt for Llama to correct the transcript.
         
         Args:
             transcript: Original transcript
@@ -148,77 +135,75 @@ class GemmaLLMCorrector:
         Returns:
             Formatted prompt string
         """
+        # Build error summary
         error_summary = []
         for error in errors[:5]:  # Limit to top 5 errors
             error_type = error.get('type', 'unknown')
             description = error.get('description', '')
             error_summary.append(f"- {error_type}: {description}")
         
-        error_list = "\n".join(error_summary) if error_summary else "No specific errors detected, but text may need improvement."
+        has_errors = len(error_summary) > 0
+        if has_errors:
+            error_list = "\n".join(error_summary)
+            error_instruction = "Fix the errors listed above."
+        else:
+            error_list = "No errors detected."
+            error_instruction = "If the transcript is already correct and makes sense, return it UNCHANGED. Only correct if you notice actual errors."
         
-        prompt = f"""You are a careful, concise transcription corrector for the medical domain.
+        prompt = f"""You are a careful, concise transcription corrector.
 
-Original transcript (medical context; may contain misspellings or nonsense words):
+Original transcript (short conversational snippet; may contain misspellings or nonsense words):
 "{transcript}"
 
 Detected issues:
 {error_list}
 
 Requirements:
+- {error_instruction}
+- If the transcript is already correct, fluent, and makes sense, return it EXACTLY AS IS without any changes.
+- Only correct if there are actual errors (misspellings, garbled words, grammar issues).
 - Output exactly one corrected sentence (no lists, no explanations).
-- Make the sentence fluent, grammatical English, and keep it clearly medical in meaning.
-- If words look garbled, infer the most plausible intended medical terms.
-- Preserve the original meaning and clinical context; keep medical terminology if possible.
-- Fix capitalization and punctuation.
-- Ensure at least one change from the original if the original is garbled.
-- Do NOT add a prefix/suffix; return only the corrected sentence.
+- Make the sentence fluent, grammatical English with natural conversational phrasing and all identifiable words.
+- If words look garbled, infer the most plausible intended words based on context.
+- Do NOT add a prefix/suffix; return only the corrected sentence (or unchanged original if already correct).
 
 Corrected sentence:"""
         
         return prompt
     
-    def _generate_correction(self, prompt: str, max_length: int = 512) -> str:
+    def _generate_correction(self, prompt: str, max_length: int = 256) -> str:
         """
-        Generate correction using Gemma model.
+        Generate correction using Ollama Llama model.
         
         Args:
             prompt: Input prompt
-            max_length: Maximum generation length
+            max_length: Maximum generation length (not used for Ollama, kept for compatibility)
         
         Returns:
             Corrected text
         """
-        # Tokenize input
-        inputs = self.tokenizer(
-            prompt,
-            return_tensors="pt",
-            truncation=True,
-            max_length=1024
-        )
-        # Ensure inputs are on the same device as the model (handles mps/cuda/cpu)
-        inputs = inputs.to(self.model.device)
-        
-        # Generate
-        with torch.no_grad():
-            outputs = self.model.generate(
-                **inputs,
-                max_new_tokens=max_length,
-                temperature=0.2,  # more deterministic
-                do_sample=False,
-                pad_token_id=self.tokenizer.eos_token_id
-            )
-        
-        # Decode output
-        generated_text = self.tokenizer.decode(
-            outputs[0][inputs['input_ids'].shape[1]:],
-            skip_special_tokens=True
+        # Generate using Ollama
+        generated_text = self.ollama.generate(
+            prompt=prompt,
+            options={
+                "temperature": 0.2,  # Low temperature for more deterministic output
+                "num_predict": 256,  # Max tokens to generate
+            }
         )
         
         # Clean up the output (remove extra formatting)
         corrected_text = generated_text.strip()
         
-        # Remove any prompt-like artifacts
+        # Remove any prompt-like artifacts and prefixes
+        # Remove common prefixes that LLMs might add
         corrected_text = re.sub(r'^(Corrected (transcript|sentence):)\s*', '', corrected_text, flags=re.IGNORECASE)
+        corrected_text = re.sub(r'^(Here is the (improved|corrected) transcript:)\s*', '', corrected_text, flags=re.IGNORECASE)
+        corrected_text = re.sub(r'^(Improved transcript:)\s*', '', corrected_text, flags=re.IGNORECASE)
+        corrected_text = re.sub(r'^(Improved:)\s*', '', corrected_text, flags=re.IGNORECASE)
+        corrected_text = corrected_text.strip()
+        
+        # Remove surrounding quotes if present
+        corrected_text = re.sub(r'^["\'](.*)["\']$', r'\1', corrected_text)
         corrected_text = corrected_text.strip()
         
         # If multiple lines, keep the first meaningful line
@@ -244,7 +229,7 @@ Corrected sentence:"""
         Returns:
             Improved transcript
         """
-        if not self.model or not self.tokenizer:
+        if not self.ollama or not self.ollama.is_available():
             return transcript
         
         improvement_instructions = {
@@ -259,20 +244,30 @@ Corrected sentence:"""
 
 Original transcript: "{transcript}"
 
-Please improve this transcript by: {instruction}
+IMPORTANT: If the transcript is already correct, well-formatted, and makes sense, return it UNCHANGED.
+Only make changes if there are actual errors that need fixing (missing punctuation, capitalization issues, grammar problems).
+
+If changes are needed, improve this transcript by: {instruction}
 Maintain the original meaning and content.
+
+Do NOT add any prefix like "Here is the improved transcript:" or "Improved transcript:".
+Output ONLY the improved sentence with no explanations or labels (or return unchanged if already correct).
 
 Improved transcript:"""
         
         try:
-            return self._generate_correction(prompt, max_length=256)
+            start_time = time.time()
+            improved = self._generate_correction(prompt, max_length=256)
+            inference_time = time.time() - start_time
+            logger.info(f"LLM improvement inference time: {inference_time:.2f}s")
+            return improved
         except Exception as e:
             logger.error(f"Transcript improvement failed: {e}")
             return transcript
     
     def is_available(self) -> bool:
-        """Check if Gemma model is available."""
-        return self.model is not None and self.tokenizer is not None
+        """Check if Ollama LLM is available."""
+        return self.ollama is not None and self.ollama.is_available()
     
     def get_model_info(self) -> Dict:
         """Get information about the loaded model."""
@@ -280,14 +275,23 @@ Improved transcript:"""
             return {
                 "model": None,
                 "status": "not_loaded",
-                "device": self.device
+                "backend": "ollama"
             }
+        
+        # Extract parameter count from model name
+        params = "unknown"
+        if "3b" in self.model_name.lower() or "3.2" in self.model_name.lower():
+            params = "3B"
+        elif "8b" in self.model_name.lower() or "3.1" in self.model_name.lower():
+            params = "8B"
+        elif "7b" in self.model_name.lower():
+            params = "7B"
         
         return {
             "model": self.model_name,
             "status": "loaded",
-            "device": self.device,
-            "quantization": self.use_quantization,
-            "parameters": "2B" if "2b" in self.model_name.lower() else "7B" if "7b" in self.model_name.lower() else "unknown"
+            "backend": "ollama",
+            "parameters": params,
+            "base_url": self.ollama_base_url
         }
 

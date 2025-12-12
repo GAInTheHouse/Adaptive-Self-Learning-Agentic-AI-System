@@ -50,18 +50,44 @@ class BaselineSTTModel:
             "whisper-small": "openai/whisper-small",
             # Base model now uses wav2vec2-base-960h
             "wav2vec2-base": "facebook/wav2vec2-base-960h",
-            # Fine-tuned version mapped to Whisper Tiny but labeled as fine-tuned wav2vec2
-            "wav2vec2-finetuned": "openai/whisper-tiny",
         }
         
-        actual_model = model_map.get(model_name, "openai/whisper-base")
-        
-        # Load wav2vec2 (CTC) if selected
-        if "wav2vec2" in actual_model:
-            logger.info(f"Loading Wav2Vec2 model: {actual_model}")
-            self.processor = Wav2Vec2Processor.from_pretrained(actual_model)
-            self.model = Wav2Vec2ForCTC.from_pretrained(actual_model)
-            self.is_ctc = True
+        # Check for fine-tuned model in models folder
+        if model_name == "wav2vec2-finetuned" or model_name == "Fine-tuned Wav2Vec2":
+            finetuned_path = Path("models/finetuned_wav2vec2")
+            if finetuned_path.exists():
+                try:
+                    from src.agent.fine_tuner import FineTuner
+                    logger.info(f"Loading fine-tuned Wav2Vec2 model from {finetuned_path}")
+                    self.model, self.processor = FineTuner.load_model(str(finetuned_path), device=self.device)
+                    self.is_ctc = True
+                    self.model_name = "wav2vec2-finetuned"
+                    logger.info("✓ Fine-tuned model loaded successfully")
+                except Exception as e:
+                    logger.warning(f"Failed to load fine-tuned model: {e}. Falling back to base model.")
+                    actual_model = model_map.get("wav2vec2-base", "facebook/wav2vec2-base-960h")
+                    logger.info(f"Loading Wav2Vec2 base model: {actual_model}")
+                    self.processor = Wav2Vec2Processor.from_pretrained(actual_model)
+                    self.model = Wav2Vec2ForCTC.from_pretrained(actual_model)
+                    self.is_ctc = True
+                    self.model_name = "wav2vec2-base"
+            else:
+                logger.warning(f"Fine-tuned model not found at {finetuned_path}. Using base model.")
+                actual_model = model_map.get("wav2vec2-base", "facebook/wav2vec2-base-960h")
+                logger.info(f"Loading Wav2Vec2 base model: {actual_model}")
+                self.processor = Wav2Vec2Processor.from_pretrained(actual_model)
+                self.model = Wav2Vec2ForCTC.from_pretrained(actual_model)
+                self.is_ctc = True
+                self.model_name = "wav2vec2-base"
+        else:
+            actual_model = model_map.get(model_name, "openai/whisper-base")
+            
+            # Load wav2vec2 (CTC) if selected
+            if "wav2vec2" in actual_model:
+                logger.info(f"Loading Wav2Vec2 model: {actual_model}")
+                self.processor = Wav2Vec2Processor.from_pretrained(actual_model)
+                self.model = Wav2Vec2ForCTC.from_pretrained(actual_model)
+                self.is_ctc = True
         else:
             logger.info(f"Loading Whisper model: {actual_model}")
             self.processor = WhisperProcessor.from_pretrained(actual_model)

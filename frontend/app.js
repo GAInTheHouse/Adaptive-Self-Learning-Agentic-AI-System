@@ -94,14 +94,9 @@ function updateHealthDisplay(health) {
     const container = document.getElementById('health-info');
     
     performanceMock = {
-        total_inferences: health.components?.agent?.total_inferences || 482,
-        avg_inference_time: 2.4,
-        error_rate: 0.18,
-        correction_rate: 0.15,
-        wer_baseline: 0.36,
-        wer_finetuned: 0.32,
-        cer_baseline: 0.13,
-        cer_finetuned: 0.11
+        total_inferences: health.components?.agent?.total_inferences || 0,
+        avg_inference_time: 0.0,
+        avg_error_score: 0.0
     };
     
     const html = `
@@ -608,26 +603,52 @@ async function refreshDatasets() {
 // ==================== FINE-TUNING ====================
 async function refreshFinetuningStatus() {
     const container = document.getElementById('finetuning-status');
-    const html = `
-        <div class="stat-row">
-            <span class="stat-label">Status</span>
-            <span class="stat-value">
-                <span class="badge badge-success">Operational</span>
-            </span>
-        </div>
-        <div class="stat-row">
-            <span class="stat-label">Ready for Fine-tuning</span>
-            <span class="stat-value">
-                <span class="badge badge-warning">Waiting for more cases</span>
-            </span>
-        </div>
-        <div class="stat-row">
-            <span class="stat-label">Total Jobs</span>
-            <span class="stat-value">3</span>
-        </div>
-    `;
-    
-    container.innerHTML = html;
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/finetuning/status`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch status');
+        }
+        const data = await response.json();
+        
+        const orchestrator = data.orchestrator || {};
+        const status = data.status || 'unknown';
+        const errorCount = orchestrator.error_cases_count || 0;
+        const totalJobs = orchestrator.total_jobs || 0;
+        const activeJobs = orchestrator.active_jobs || 0;
+        
+        const html = `
+            <div class="stat-row">
+                <span class="stat-label">Status</span>
+                <span class="stat-value">
+                    <span class="badge ${status === 'operational' ? 'badge-success' : status === 'unavailable' ? 'badge-secondary' : 'badge-warning'}">${status}</span>
+                </span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Error Cases</span>
+                <span class="stat-value">${errorCount}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Total Jobs</span>
+                <span class="stat-value">${totalJobs}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Active Jobs</span>
+                <span class="stat-value">${activeJobs}</span>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    } catch (error) {
+        container.innerHTML = `
+            <div class="stat-row">
+                <span class="stat-label">Status</span>
+                <span class="stat-value">
+                    <span class="badge badge-secondary">Unavailable</span>
+                </span>
+            </div>
+            <div class="text-muted">${error.message}</div>
+        `;
+    }
 }
 
 async function triggerFinetuning() {
@@ -662,63 +683,104 @@ async function triggerFinetuning() {
 
 async function refreshJobs() {
     const container = document.getElementById('jobs-list');
-    const jobs = [
-        { job_id: 'FT-2024-001', status: 'completed', created_at: new Date().toISOString(), dataset_id: 'dataset_v1' },
-        { job_id: 'FT-2024-002', status: 'running', created_at: new Date(Date.now() - 3600 * 1000).toISOString(), dataset_id: 'dataset_v2' },
-        { job_id: 'FT-2024-003', status: 'queued', created_at: new Date(Date.now() - 7200 * 1000).toISOString(), dataset_id: 'dataset_v3' }
-    ];
-    
-    const html = jobs.map(job => `
-        <div class="case-item">
-            <div class="case-header">
-                <span class="case-id">${job.job_id}</span>
-                <span class="badge ${job.status === 'completed' ? 'badge-success' : job.status === 'running' ? 'badge-info' : 'badge-warning'}">${job.status}</span>
-            </div>
-            <div class="case-meta">
-                <span><i class="fas fa-clock"></i> ${new Date(job.created_at).toLocaleString()}</span>
-                ${job.dataset_id ? `<span><i class="fas fa-database"></i> ${job.dataset_id}</span>` : ''}
-            </div>
-        </div>
-    `).join('');
-    
-    container.innerHTML = html;
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/finetuning/jobs`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch jobs');
+        }
+        const data = await response.json();
+        const jobs = data.jobs || [];
+        
+        if (jobs.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center">No fine-tuning jobs found</p>';
+            return;
+        }
+        
+        const html = jobs.map(job => {
+            const status = job.status || 'unknown';
+            const jobId = job.job_id || 'N/A';
+            const createdAt = job.created_at || job.created_at_timestamp || new Date().toISOString();
+            const datasetId = job.dataset_id || job.config?.dataset_id || '';
+            
+            return `
+                <div class="case-item">
+                    <div class="case-header">
+                        <span class="case-id">${jobId}</span>
+                        <span class="badge ${status === 'completed' ? 'badge-success' : status === 'running' || status === 'in_progress' ? 'badge-info' : status === 'queued' ? 'badge-warning' : 'badge-secondary'}">${status}</span>
+                    </div>
+                    <div class="case-meta">
+                        <span><i class="fas fa-clock"></i> ${new Date(createdAt).toLocaleString()}</span>
+                        ${datasetId ? `<span><i class="fas fa-database"></i> ${datasetId}</span>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        container.innerHTML = html;
+    } catch (error) {
+        container.innerHTML = `<p class="text-muted text-center">Failed to load jobs: ${error.message}</p>`;
+    }
 }
 
 // ==================== MODELS ====================
 async function refreshModelVersions() {
     const container = document.getElementById('model-versions-list');
-    const versions = [
-        {
-            version_id: 'baseline-v1',
-            model_name: 'Wav2Vec2 Base (facebook/wav2vec2-base-960h)',
-            status: 'baseline',
-            created_at: new Date(Date.now() - 86400000).toISOString(),
-            params: '95M'
-        },
-        {
-            version_id: 'finetuned-v2',
-            model_name: 'Fine-tuned Wav2Vec2',
-            status: 'current',
-            created_at: new Date().toISOString(),
-            params: '39M'
-        }
-    ];
+    let versions = [];
     
-    const html = versions.map(version => `
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/models/versions`);
+        if (response.ok) {
+            const data = await response.json();
+            versions = data.versions || [];
+        }
+    } catch (e) {
+        console.warn('Could not fetch model versions:', e);
+        // Fallback to defaults
+        versions = [
+            {
+                version_id: 'baseline',
+                model_name: 'Wav2Vec2 Base',
+                is_current: false,
+                created_at: null,
+                parameters: 95000000
+            }
+        ];
+    }
+    
+    // If no versions found, show baseline
+    if (versions.length === 0) {
+        versions = [
+            {
+                version_id: 'baseline',
+                model_name: 'Wav2Vec2 Base',
+                is_current: false,
+                created_at: null,
+                parameters: 95000000
+            }
+        ];
+    }
+    
+    const html = versions.map(version => {
+        const isCurrent = version.is_current !== undefined ? version.is_current : (version.status === 'current');
+        const params = version.parameters ? `${(version.parameters / 1000000).toFixed(0)}M` : (version.params || 'N/A');
+        const createdDate = version.created_at ? new Date(version.created_at).toLocaleString() : 'N/A';
+        
+        return `
         <div class="case-item">
             <div class="case-header">
                 <span class="case-id">${version.version_id}</span>
-                <span class="badge ${version.status === 'current' ? 'badge-success' : 'badge-info'}">
-                    ${version.status}
+                <span class="badge ${isCurrent ? 'badge-success' : 'badge-secondary'}">
+                    ${isCurrent ? 'Current' : 'Baseline'}
                 </span>
             </div>
             <div class="case-meta">
-                <span><i class="fas fa-cube"></i> ${version.model_name}</span>
-                <span><i class="fas fa-microchip"></i> Params: ${version.params}</span>
-                <span><i class="fas fa-clock"></i> ${new Date(version.created_at).toLocaleString()}</span>
+                <span><i class="fas fa-cube"></i> ${version.model_name || version.version_id}</span>
+                <span><i class="fas fa-microchip"></i> Params: ${params}</span>
+                <span><i class="fas fa-clock"></i> ${createdDate}</span>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
     
     container.innerHTML = html;
 }
@@ -733,21 +795,29 @@ async function refreshPerformanceMetrics() {
             data = await response.json();
         }
     } catch (e) {
-        // ignore, fallback to mock
+        // ignore, fallback to defaults
+    }
+    
+    // Get evaluation results (WER/CER) from dedicated endpoint
+    let evalData = { baseline: { wer: 0.36, cer: 0.13 }, finetuned: { wer: 0.36, cer: 0.13 } };
+    try {
+        const evalResponse = await fetch(`${API_BASE_URL}/api/models/evaluation`);
+        if (evalResponse.ok) {
+            evalData = await evalResponse.json();
+        }
+    } catch (e) {
+        console.warn('Could not fetch evaluation results:', e);
     }
     
     const stats = data?.overall_stats || {};
     performanceMock = {
-        total_inferences: stats.total_inferences ?? 482,
-        avg_inference_time: stats.avg_inference_time ?? 2.4,
-        avg_error_score: stats.avg_error_score ?? 0.15,
-        // WER/CER defaults updated to reported real-world performance
-        // Baseline WER/CER: 36% / 13%
-        // Fine-tuned (better but close): 32% / 11%
-        wer_baseline: data?.wer_baseline ?? 0.36,
-        wer_finetuned: data?.wer_finetuned ?? 0.32,
-        cer_baseline: data?.cer_baseline ?? 0.13,
-        cer_finetuned: data?.cer_finetuned ?? 0.11
+        total_inferences: stats.total_inferences ?? 0,
+        avg_inference_time: stats.avg_inference_time ?? 0.0,
+        avg_error_score: stats.avg_error_score ?? 0.0,
+        wer_baseline: evalData.baseline?.wer ?? stats.baseline_wer ?? 0.36,
+        wer_finetuned: evalData.finetuned?.wer ?? stats.finetuned_wer ?? 0.36,
+        cer_baseline: evalData.baseline?.cer ?? stats.baseline_cer ?? 0.13,
+        cer_finetuned: evalData.finetuned?.cer ?? stats.finetuned_cer ?? 0.13
     };
     
     const html = `
@@ -763,14 +833,14 @@ async function refreshPerformanceMetrics() {
             <span class="stat-label">Average Error Score</span>
             <span class="stat-value">${performanceMock.avg_error_score.toFixed(3)}</span>
         </div>
-        <div class="stat-row">
+        ${performanceMock.wer_baseline !== undefined ? `<div class="stat-row">
             <span class="stat-label">Baseline WER / CER</span>
-            <span class="stat-value">${(performanceMock.wer_baseline * 100).toFixed(1)}% / ${(performanceMock.cer_baseline * 100).toFixed(2)}%</span>
-        </div>
-        <div class="stat-row">
+            <span class="stat-value">${(performanceMock.wer_baseline * 100).toFixed(1)}% / ${((performanceMock.cer_baseline || 0) * 100).toFixed(2)}%</span>
+        </div>` : ''}
+        ${performanceMock.wer_finetuned !== undefined ? `<div class="stat-row">
             <span class="stat-label">Fine-tuned WER / CER</span>
-            <span class="stat-value">${(performanceMock.wer_finetuned * 100).toFixed(1)}% / ${(performanceMock.cer_finetuned * 100).toFixed(2)}%</span>
-        </div>
+            <span class="stat-value">${(performanceMock.wer_finetuned * 100).toFixed(1)}% / ${((performanceMock.cer_finetuned || 0) * 100).toFixed(2)}%</span>
+        </div>` : ''}
     `;
     
     container.innerHTML = html;
@@ -782,9 +852,14 @@ async function refreshTrends() {
     const days = parseInt(document.getElementById('trend-days').value);
     const container = document.getElementById('trends-chart');
     
-    // Use performance mock data to build a two-point trend (baseline vs fine-tuned)
-    const baseVal = metric === 'wer' ? (performanceMock?.wer_baseline ?? 0.124) * 100 : (performanceMock?.cer_baseline ?? 0.029) * 100;
-    const tunedVal = metric === 'wer' ? (performanceMock?.wer_finetuned ?? 0.111) * 100 : (performanceMock?.cer_finetuned ?? 0.024) * 100;
+    // Use performance data to build a two-point trend (baseline vs fine-tuned)
+    // Only show if WER/CER data is available
+    if (performanceMock?.wer_baseline === undefined && performanceMock?.cer_baseline === undefined) {
+        container.innerHTML = '<p class="text-muted">WER/CER data not available</p>';
+        return;
+    }
+    const baseVal = metric === 'wer' ? (performanceMock?.wer_baseline ?? 0) * 100 : (performanceMock?.cer_baseline ?? 0) * 100;
+    const tunedVal = metric === 'wer' ? (performanceMock?.wer_finetuned ?? 0) * 100 : (performanceMock?.cer_finetuned ?? 0) * 100;
     const points = [
         { label: 'Baseline', value: baseVal },
         { label: 'Fine-tuned', value: tunedVal }

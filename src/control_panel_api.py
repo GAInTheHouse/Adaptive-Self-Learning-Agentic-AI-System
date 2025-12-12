@@ -24,6 +24,9 @@ from src.agent.agent import STTAgent
 from src.data.integration import IntegratedDataManagementSystem
 from src.data.finetuning_coordinator import FinetuningCoordinator
 from src.data.finetuning_orchestrator import FinetuningConfig
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Initialize FastAPI
 app = FastAPI(
@@ -44,15 +47,15 @@ app.add_middleware(
 # Initialize components
 print("🚀 Initializing STT Control Panel...")
 # We'll create model instances dynamically based on selection
-LLAMA_MODEL = "mistralai/Mistral-7B-Instruct-v0.3"
+OLLAMA_MODEL = "llama3.2:3b"  # Default Ollama Llama model
 
 # For now, initialize a default one (baseline = wav2vec2 base)
 default_baseline_model = BaselineSTTModel(model_name="wav2vec2-base")
 default_agent = STTAgent(
     baseline_model=default_baseline_model,
     use_llm_correction=False,  # disable LLM by default to avoid UI hangs
-    llm_model_name=LLAMA_MODEL,
-    use_quantization=False  # disable bnb quant on non-CUDA to avoid bitsandbytes errors
+    llm_model_name=OLLAMA_MODEL,
+    use_quantization=False  # Not used for Ollama, kept for compatibility
 )
 
 # Store model instances for different versions (lazy loading)
@@ -71,8 +74,8 @@ def get_model_and_agent(model_name: str):
             agent = STTAgent(
                 baseline_model=model,
                 use_llm_correction=False,  # disable LLM to keep UI responsive
-                llm_model_name=LLAMA_MODEL,
-                use_quantization=False
+                llm_model_name=OLLAMA_MODEL,
+                use_quantization=False  # Not used for Ollama
             )
             model_instances[model_name] = model
             agent_instances[model_name] = agent
@@ -124,28 +127,6 @@ perf_counters = {
     "sum_error_scores": 0.0,
 }
 
-# Demo failed cases (fallback when real store is empty)
-_demo_now = datetime.now().isoformat()
-_demo_cases_list = [
-    {
-        "case_id": "demo_fc_p232_155",
-        "timestamp": _demo_now,
-        "original_transcript": "His latrpar as usually fore",
-        "corrected_transcript": "He’s late as usual, of course.",
-    },
-    {
-        "case_id": "demo_fc_p232_173",
-        "timestamp": _demo_now,
-        "original_transcript": "it began a book by itsel",
-        "corrected_transcript": "It became a book by itself",
-    },
-]
-DEMO_FAILED_CASES = {}
-for c in _demo_cases_list:
-    metrics = compute_error_score(c["original_transcript"], c["corrected_transcript"])
-    c["error_score"] = metrics["error_score"]
-    c["error_types"] = metrics.get("error_types", {})
-    DEMO_FAILED_CASES[c["case_id"]] = c
 
 def _normalize_case(case: Dict) -> Dict:
     """Ensure case fields are JSON-serializable and have string timestamps."""
@@ -157,77 +138,6 @@ def _normalize_case(case: Dict) -> Dict:
         c["timestamp"] = datetime.now().isoformat()
     return c
 
-# Demo helpers
-def sentence_case(text: str) -> str:
-    text = text.strip()
-    if not text:
-        return text
-    return text[0].upper() + text[1:].lower()
-
-
-def apply_demo_overrides(filename: str, model_name: str, result: Dict, mode: str = "baseline", auto_correction: bool = True):
-    """
-    Demo rigging: for file p232_155.wav, force specific outputs.
-    - Baseline STT: sentence-case, not all caps.
-    - Fine-tuned: closer to gold (sometimes perfect, per mapping).
-    - LLM (agent): gold standard.
-    """
-    fname = (filename or "").lower()
-    demo_map = {
-        "p232_155.wav": {
-            "gold": "He’s late as usual, of course.",
-            "baseline": "His latrpar as usually fore",
-            "finetuned": "He’s late as usual, of course."
-        },
-        "p232_173.wav": {
-            "gold": "It became a book by itself",
-            "baseline": "it began a book by itsel",
-            "finetuned": "It became a book by itself"
-        },
-        "p232_211.wav": {
-            "gold": "Feel the heat?",
-            "baseline": "Fe ol the heat",
-            "finetuned": "Feel the heat?"
-        }
-    }
-
-    if fname not in demo_map:
-        # For non-demo files, just ensure baseline transcript is sentence-cased
-        if result.get("transcript"):
-            result["transcript"] = sentence_case(result["transcript"])
-        if result.get("original_transcript"):
-            result["original_transcript"] = sentence_case(result["original_transcript"])
-        return
-
-    gold = demo_map[fname]["gold"]
-    baseline_txt = demo_map[fname]["baseline"]
-    finetuned_txt = demo_map[fname]["finetuned"]
-
-    # Baseline transcripts
-    if mode == "baseline":
-        chosen = finetuned_txt if model_name == "wav2vec2-finetuned" else baseline_txt
-        chosen = sentence_case(chosen)
-        result["transcript"] = chosen
-        result["original_transcript"] = chosen
-        return
-
-    # Agent mode: set original from STT, corrected to gold
-    stt_choice = finetuned_txt if model_name == "wav2vec2-finetuned" else baseline_txt
-    stt_choice = sentence_case(stt_choice)
-    result["original_transcript"] = stt_choice
-    if auto_correction:
-        result["corrected_transcript"] = gold
-        result["transcript"] = gold
-        # Use compute_error_score helper for consistent word-level calculation
-        error_metrics = compute_error_score(stt_choice, gold)
-        result["error_detection"] = error_metrics
-        result["corrections"] = {"applied": True, "count": error_metrics.get("error_count", 0)}
-    else:
-        result["transcript"] = stt_choice
-        result["corrected_transcript"] = stt_choice
-        # Still calculate error detection even if correction not applied
-        error_metrics = compute_error_score(stt_choice, gold)
-        result["error_detection"] = error_metrics
 
 # ==================== PYDANTIC MODELS ====================
 
@@ -275,6 +185,15 @@ async def health_check():
     """Comprehensive health check"""
     agent_stats = default_agent.get_agent_stats()
     
+    # Check Ollama availability
+    llm_available = False
+    try:
+        from src.agent.ollama_llm import OllamaLLM
+        ollama_llm = OllamaLLM(model_name="llama3.2:3b")
+        llm_available = ollama_llm.is_available()
+    except Exception:
+        llm_available = False
+    
     health = {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
@@ -287,7 +206,7 @@ async def health_check():
             "agent": {
                 "status": "operational",
                 "error_threshold": agent_stats['error_detection']['threshold'],
-                "llm_available": True  # present as available on UI even with LLM disabled
+                "llm_available": llm_available
             },
             "data_management": {
                 "status": "operational"
@@ -437,18 +356,12 @@ async def transcribe_baseline(
             content = await file.read()
             tmp.write(content)
             tmp_path = tmp.name
-        
-        # Simulate inference delay for demo (5-10s)
-        await asyncio.sleep(random.uniform(5.0, 10.0))
 
         start = time.time()
         result = stt_model.transcribe(tmp_path)
         result["inference_time_seconds"] = time.time() - start
         result["model_used"] = model
         result["original_transcript"] = result.get("transcript", "")
-        
-        # Demo override and sentence casing
-        apply_demo_overrides(file.filename, model, result, mode="baseline")
         
         # Update perf counters
         perf_counters["total_inferences"] += 1
@@ -484,9 +397,6 @@ async def transcribe_agent(
             content = await file.read()
             tmp.write(content)
             tmp_path = tmp.name
-        
-        # Simulate inference delay for demo (5-10s)
-        await asyncio.sleep(random.uniform(5.0, 10.0))
 
         # Get audio length
         try:
@@ -548,9 +458,6 @@ async def transcribe_agent(
                 "error_types": {"diff": diff_count}
             }
 
-        # Demo override and sentence casing
-        apply_demo_overrides(file.filename, model, result, mode="agent", auto_correction=auto_correction)
-        
         # Auto-record if errors detected and enabled
         case_id = None
         if record_if_error and result.get('error_detection', {}).get('has_errors', False):
@@ -637,9 +544,6 @@ async def get_failed_cases(
         all_cases = getattr(all_cases, "failed_cases", {}) if all_cases else {}
         if not isinstance(all_cases, dict):
             all_cases = {}
-        # Fallback to demo cases if none recorded
-        if not all_cases:
-            all_cases = DEMO_FAILED_CASES
 
         cases_list = list(all_cases.values())[offset:offset + limit]
         cases_list = [_normalize_case(c) for c in cases_list]
@@ -661,7 +565,7 @@ async def get_case_details(case_id: str):
         case = getattr(case, "failed_cases", {}) if case else {}
         if not isinstance(case, dict):
             case = {}
-        case = case.get(case_id) or DEMO_FAILED_CASES.get(case_id)
+        case = case.get(case_id)
         if not case:
             raise HTTPException(status_code=404, detail="Case not found")
         return _normalize_case(case)
@@ -752,12 +656,42 @@ async def generate_report():
 async def get_finetuning_status():
     """Get fine-tuning orchestrator status"""
     if not coordinator:
-        raise HTTPException(status_code=503, detail="Fine-tuning coordinator not available")
+        # Return mock status if coordinator not available
+        return {
+            "status": "unavailable",
+            "message": "Fine-tuning coordinator not initialized",
+            "orchestrator": {
+                "status": "disabled",
+                "active_jobs": 0,
+                "total_jobs": 0,
+                "error_cases_count": 0
+            }
+        }
     
     try:
-        return coordinator.get_system_status()
+        status = coordinator.get_system_status()
+        
+        # Get real error cases count
+        if hasattr(data_system, 'data_manager') and hasattr(data_system.data_manager, 'failed_cases'):
+            error_count = len(data_system.data_manager.failed_cases) if isinstance(data_system.data_manager.failed_cases, list) else 0
+            if isinstance(status, dict):
+                if 'orchestrator' in status:
+                    status['orchestrator']['error_cases_count'] = error_count
+                else:
+                    status['orchestrator'] = {"error_cases_count": error_count}
+        
+        return status
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error getting fine-tuning status: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "orchestrator": {
+                "status": "error",
+                "active_jobs": 0,
+                "total_jobs": 0
+            }
+        }
 
 
 @app.post("/api/finetuning/trigger")
@@ -788,15 +722,34 @@ async def trigger_finetuning(force: bool = False):
 async def list_finetuning_jobs():
     """List all fine-tuning jobs"""
     if not coordinator:
-        raise HTTPException(status_code=503, detail="Fine-tuning coordinator not available")
+        # Return empty list if coordinator not available
+        return {
+            "jobs": [],
+            "message": "Fine-tuning coordinator not available"
+        }
     
     try:
-        jobs = coordinator.orchestrator.jobs
+        jobs = coordinator.orchestrator.jobs if hasattr(coordinator, 'orchestrator') and hasattr(coordinator.orchestrator, 'jobs') else {}
+        
+        # Convert jobs to dict format
+        jobs_list = []
+        for job in jobs.values():
+            if hasattr(job, 'to_dict'):
+                jobs_list.append(job.to_dict())
+            elif hasattr(job, '__dict__'):
+                jobs_list.append(job.__dict__)
+            else:
+                jobs_list.append(str(job))
+        
         return {
-            "jobs": [job.__dict__ for job in jobs.values()]
+            "jobs": jobs_list
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error listing fine-tuning jobs: {e}")
+        return {
+            "jobs": [],
+            "error": str(e)
+        }
 
 
 @app.get("/api/finetuning/job/{job_id}")
@@ -822,24 +775,129 @@ async def get_job_details(job_id: str):
 async def get_model_info(model: str = Query("wav2vec2-base", description="Model to get info for")):
     """Get model information for specified model"""
     try:
+        # Handle model name variations from UI
+        if model == "Fine-tuned Wav2Vec2":
+            model = "wav2vec2-finetuned"
+        elif model == "Wav2Vec2 Base":
+            model = "wav2vec2-base"
+            
         stt_model, _ = get_model_and_agent(model)
         return stt_model.get_model_info()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/models/versions")
-async def list_model_versions():
-    """List all model versions"""
-    if not coordinator:
-        raise HTTPException(status_code=503, detail="Model management not available")
-    
+@app.get("/api/models/evaluation")
+async def get_model_evaluation():
+    """Get evaluation results (WER/CER) from fine-tuning"""
     try:
-        versions = coordinator.deployer.versions
+        eval_file = Path("models/finetuned_wav2vec2/evaluation_results.json")
+        if not eval_file.exists():
+            # Return default values if no evaluation results found
+            return {
+                "baseline": {
+                    "wer": 0.36,
+                    "cer": 0.13
+                },
+                "finetuned": {
+                    "wer": 0.36,
+                    "cer": 0.13
+                },
+                "improvement": {
+                    "wer_improvement": 0.0,
+                    "cer_improvement": 0.0
+                },
+                "available": False
+            }
+        
+        with open(eval_file, 'r') as f:
+            eval_data = json.load(f)
+        
+        # Extract WER/CER from evaluation results
+        baseline_wer = eval_data.get("baseline_wer", 0.36)
+        baseline_cer = eval_data.get("baseline_cer", 0.13)
+        finetuned_wer = eval_data.get("finetuned_wer", baseline_wer)
+        finetuned_cer = eval_data.get("finetuned_cer", baseline_cer)
+        
         return {
-            "versions": [v.__dict__ for v in versions.values()]
+            "baseline": {
+                "wer": baseline_wer,
+                "cer": baseline_cer
+            },
+            "finetuned": {
+                "wer": finetuned_wer,
+                "cer": finetuned_cer
+            },
+            "improvement": {
+                "wer_improvement": baseline_wer - finetuned_wer,
+                "cer_improvement": baseline_cer - finetuned_cer
+            },
+            "available": True,
+            "evaluation_date": eval_data.get("evaluation_date", None)
         }
     except Exception as e:
+        logger.error(f"Error loading evaluation results: {e}")
+        return {
+            "baseline": {"wer": 0.36, "cer": 0.13},
+            "finetuned": {"wer": 0.36, "cer": 0.13},
+            "improvement": {"wer_improvement": 0.0, "cer_improvement": 0.0},
+            "available": False,
+            "error": str(e)
+        }
+
+
+@app.get("/api/models/versions")
+async def list_model_versions():
+    """List all model versions - detect from models folder"""
+    try:
+        versions = []
+        
+        # Always include baseline
+        baseline_model, _ = get_model_and_agent("wav2vec2-base")
+        baseline_info = baseline_model.get_model_info()
+        versions.append({
+            "version_id": "baseline",
+            "model_name": baseline_info["name"],
+            "parameters": baseline_info["parameters"],
+            "is_current": False,
+            "created_at": None
+        })
+        
+        # Check for fine-tuned model
+        finetuned_path = Path("models/finetuned_wav2vec2")
+        if finetuned_path.exists():
+            try:
+                from src.agent.fine_tuner import FineTuner
+                if FineTuner.model_exists(str(finetuned_path)):
+                    # Load metadata if available
+                    metadata_file = finetuned_path / "model_metadata.json"
+                    created_at = None
+                    if metadata_file.exists():
+                        with open(metadata_file, 'r') as f:
+                            metadata = json.load(f)
+                            created_at = metadata.get("saved_at")
+                    
+                    finetuned_model, _ = get_model_and_agent("wav2vec2-finetuned")
+                    finetuned_info = finetuned_model.get_model_info()
+                    versions.append({
+                        "version_id": "finetuned",
+                        "model_name": finetuned_info["name"],
+                        "parameters": finetuned_info["parameters"],
+                        "is_current": True,  # Fine-tuned is current
+                        "created_at": created_at
+                    })
+            except Exception as e:
+                logger.warning(f"Could not load fine-tuned model info: {e}")
+        
+        # Mark baseline as not current if fine-tuned exists
+        if len(versions) > 1:
+            versions[0]["is_current"] = False
+        
+        return {
+            "versions": versions
+        }
+    except Exception as e:
+        logger.error(f"Error listing model versions: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -862,9 +920,28 @@ async def get_deployed_model():
 
 @app.get("/api/metadata/performance")
 async def get_performance_metrics():
-    """Get performance metrics history"""
+    """Get performance metrics history with real WER/CER from evaluation"""
     try:
-        report = data_system.metadata_tracker.generate_performance_report()
+        # Get evaluation results (real WER/CER from fine-tuning)
+        eval_file = Path("models/finetuned_wav2vec2/evaluation_results.json")
+        baseline_wer = 0.36
+        baseline_cer = 0.13
+        finetuned_wer = 0.36
+        finetuned_cer = 0.13
+        
+        if eval_file.exists():
+            try:
+                with open(eval_file, 'r') as f:
+                    eval_data = json.load(f)
+                baseline_wer = eval_data.get("baseline_wer", 0.36)
+                baseline_cer = eval_data.get("baseline_cer", 0.13)
+                finetuned_wer = eval_data.get("finetuned_wer", baseline_wer)
+                finetuned_cer = eval_data.get("finetuned_cer", baseline_cer)
+            except Exception as e:
+                logger.warning(f"Could not read evaluation results: {e}")
+        
+        # Get live performance counters
+        report = data_system.metadata_tracker.generate_performance_report() if hasattr(data_system, 'metadata_tracker') else {}
         # Overlay live perf counters
         overall = report.get("overall_stats", {})
         total_inf = max(overall.get("total_inferences", 0), perf_counters["total_inferences"])
@@ -875,11 +952,34 @@ async def get_performance_metrics():
         sum_error_scores = perf_counters.get("sum_error_scores", 0.0)
         avg_error_score = (sum_error_scores / total_inf) if total_inf > 0 else 0.0
         
+        # Get real WER/CER from evaluation results
+        eval_file = Path("models/finetuned_wav2vec2/evaluation_results.json")
+        baseline_wer = 0.36
+        baseline_cer = 0.13
+        finetuned_wer = 0.36
+        finetuned_cer = 0.13
+        
+        if eval_file.exists():
+            try:
+                with open(eval_file, 'r') as f:
+                    eval_data = json.load(f)
+                baseline_wer = eval_data.get("baseline_wer", 0.36)
+                baseline_cer = eval_data.get("baseline_cer", 0.13)
+                finetuned_wer = eval_data.get("finetuned_wer", baseline_wer)
+                finetuned_cer = eval_data.get("finetuned_cer", baseline_cer)
+            except Exception as e:
+                logger.warning(f"Could not read evaluation results: {e}")
+        
         overall.update({
             "total_inferences": total_inf,
             "total_inference_time": total_time,
             "avg_inference_time": avg_time,
             "avg_error_score": avg_error_score,
+            # Add WER/CER from evaluation results
+            "baseline_wer": baseline_wer,
+            "baseline_cer": baseline_cer,
+            "finetuned_wer": finetuned_wer,
+            "finetuned_cer": finetuned_cer,
         })
         report["overall_stats"] = overall
         return report
@@ -892,14 +992,49 @@ async def get_performance_trends(
     metric: str = Query("wer", description="Metric to get trend for (wer, cer)"),
     days: int = Query(30, description="Number of days to look back")
 ):
-    """Get performance trends"""
+    """Get performance trends - returns baseline and fine-tuned WER/CER"""
     try:
-        trend = data_system.metadata_tracker.get_performance_trend(
-            metric=metric,
-            time_window_days=days
-        )
-        return {"metric": metric, "days": days, "trend": trend}
+        # Get real evaluation results
+        eval_file = Path("models/finetuned_wav2vec2/evaluation_results.json")
+        baseline_wer = 0.36
+        baseline_cer = 0.13
+        finetuned_wer = 0.36
+        finetuned_cer = 0.13
+        
+        if eval_file.exists():
+            try:
+                with open(eval_file, 'r') as f:
+                    eval_data = json.load(f)
+                baseline_wer = eval_data.get("baseline_wer", 0.36)
+                baseline_cer = eval_data.get("baseline_cer", 0.13)
+                finetuned_wer = eval_data.get("finetuned_wer", baseline_wer)
+                finetuned_cer = eval_data.get("finetuned_cer", baseline_cer)
+            except Exception as e:
+                logger.warning(f"Could not read evaluation results: {e}")
+        
+        # Return simple two-point trend (baseline vs fine-tuned)
+        if metric.lower() == "wer":
+            trend = [
+                {"date": "baseline", "value": baseline_wer},
+                {"date": "fine-tuned", "value": finetuned_wer}
+            ]
+        elif metric.lower() == "cer":
+            trend = [
+                {"date": "baseline", "value": baseline_cer},
+                {"date": "fine-tuned", "value": finetuned_cer}
+            ]
+        else:
+            trend = []
+        
+        return {
+            "metric": metric,
+            "days": days,
+            "trend": trend,
+            "baseline": {"wer": baseline_wer, "cer": baseline_cer},
+            "finetuned": {"wer": finetuned_wer, "cer": finetuned_cer}
+        }
     except Exception as e:
+        logger.error(f"Error getting performance trends: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

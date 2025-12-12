@@ -12,7 +12,7 @@ import numpy as np
 
 from .error_detector import ErrorDetector, ErrorSignal
 from .self_learner import SelfLearner
-from .llm_corrector import GemmaLLMCorrector
+from .llm_corrector import LlamaLLMCorrector
 from .adaptive_scheduler import AdaptiveScheduler
 from .fine_tuner import FineTuner
 
@@ -32,7 +32,7 @@ class STTAgent:
         error_threshold: float = 0.3,
         use_llm_correction: bool = True,
         llm_model_name: Optional[str] = None,
-        use_quantization: bool = False,
+        use_quantization: bool = False,  # Not used for Ollama, kept for compatibility
         enable_adaptive_fine_tuning: bool = True,
         scheduler_history_path: Optional[str] = None
     ):
@@ -42,9 +42,9 @@ class STTAgent:
         Args:
             baseline_model: Instance of BaselineSTTModel
             error_threshold: Threshold for error detection confidence
-            use_llm_correction: Whether to use Gemma LLM for intelligent correction
-            llm_model_name: Gemma model name (default: "google/gemma-2b-it")
-            use_quantization: Whether to use 8-bit quantization for LLM (saves memory)
+            use_llm_correction: Whether to use Ollama LLM for intelligent correction
+            llm_model_name: Ollama model name (default: "llama3.2:3b")
+            use_quantization: Not used for Ollama (kept for compatibility)
             enable_adaptive_fine_tuning: Whether to enable adaptive fine-tuning (Week 3)
             scheduler_history_path: Path to save/load scheduler history
         """
@@ -56,9 +56,10 @@ class STTAgent:
         self.llm_corrector = None
         if use_llm_correction:
             try:
-                self.llm_corrector = GemmaLLMCorrector(
-                    model_name=llm_model_name or "mistralai/Mistral-7B-Instruct-v0.3",
-                    use_quantization=use_quantization
+                self.llm_corrector = LlamaLLMCorrector(
+                    model_name=llm_model_name or "llama3.2:3b",
+                    use_quantization=False,  # Not used for Ollama
+                    fast_mode=True  # Kept for compatibility
                 )
                 if self.llm_corrector.is_available():
                     logger.info("✅ LLM corrector initialized successfully")
@@ -66,8 +67,8 @@ class STTAgent:
                     logger.warning("⚠️  LLM not available, using rule-based correction only")
                     self.llm_corrector = None
             except Exception as e:
-                logger.warning(f"⚠️  Failed to initialize LLM: {e}. Using rule-based correction only.")
-                self.llm_corrector = None
+                logger.error(f"❌ Failed to initialize LLM: {e}")
+                raise  # Fail and alert if Ollama is not available
         
         # Initialize adaptive scheduler and fine-tuner (Week 3)
         self.enable_adaptive_fine_tuning = enable_adaptive_fine_tuning
