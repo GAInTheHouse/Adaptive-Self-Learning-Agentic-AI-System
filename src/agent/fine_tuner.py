@@ -20,6 +20,13 @@ import json
 from pathlib import Path
 import time
 
+from src.constants import (
+    MIN_SAMPLES_FOR_FINETUNING,
+    RECOMMENDED_SAMPLES_FOR_FINETUNING,
+    SMALL_DATASET_THRESHOLD,
+    MIN_VAL_SAMPLES_FOR_SMALL_DATASET
+)
+
 # Initialize logging first
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -358,7 +365,8 @@ class FineTuner:
         batch_size: int = 4,
         learning_rate: float = 5e-5,
         max_grad_norm: float = 1.0,
-        use_hf_trainer: bool = None  # None = auto-detect based on model type
+        use_hf_trainer: bool = None,  # None = auto-detect based on model type
+        min_samples: int = MIN_SAMPLES_FOR_FINETUNING  # Minimum samples required
     ) -> Dict:
         """
         Fine-tune model on error samples with validation monitoring.
@@ -370,13 +378,14 @@ class FineTuner:
             learning_rate: Learning rate for optimizer
             max_grad_norm: Maximum gradient norm for clipping
             use_hf_trainer: Whether to use HuggingFace Trainer (None = auto-detect)
+            min_samples: Minimum number of samples required (default from constants: MIN_SAMPLES_FOR_FINETUNING)
         
         Returns:
             Dictionary with fine-tuning results
         """
-        if len(error_samples) < 10:
+        if len(error_samples) < min_samples:
             logger.warning(f"Insufficient samples ({len(error_samples)}), skipping fine-tuning")
-            logger.warning("Minimum 10 samples required for fine-tuning.")
+            logger.warning(f"Minimum {min_samples} samples required for fine-tuning.")
             return {
                 'success': False,
                 'reason': 'insufficient_samples',
@@ -385,19 +394,35 @@ class FineTuner:
                 'model_path': None
             }
         
+        if len(error_samples) < RECOMMENDED_SAMPLES_FOR_FINETUNING:
+            logger.warning(f"⚠️  Warning: Only {len(error_samples)} samples available (recommended: {RECOMMENDED_SAMPLES_FOR_FINETUNING}+)")
+            logger.warning("Fine-tuning may not be effective with such a small dataset.")
+        
         # Wav2Vec2 benefits from HF Trainer for better CTC handling
         if use_hf_trainer is None:
             use_hf_trainer = True
         
         # Split into train and validation
+        # For very small datasets, adjust validation split to ensure at least 1 validation sample if possible
         np.random.seed(42)
         indices = np.random.permutation(len(error_samples))
-        split_idx = int(len(error_samples) * (1 - self.validation_split))
-        train_indices = indices[:split_idx]
-        val_indices = indices[split_idx:]
         
-        train_samples = [error_samples[i] for i in train_indices]
-        val_samples = [error_samples[i] for i in val_indices]
+        if len(error_samples) < 5:
+            # For very small datasets, use all for training (no validation split)
+            logger.warning(f"Very small dataset ({len(error_samples)} samples), using all samples for training")
+            train_samples = error_samples
+            val_samples = []
+        else:
+            # Ensure at least MIN_VAL_SAMPLES_FOR_SMALL_DATASET validation sample for small datasets
+            effective_val_split = self.validation_split
+            min_val_samples = MIN_VAL_SAMPLES_FOR_SMALL_DATASET if len(error_samples) < SMALL_DATASET_THRESHOLD else max(1, int(len(error_samples) * self.validation_split))
+            split_idx = max(1, len(error_samples) - min_val_samples)
+            
+            train_indices = indices[:split_idx]
+            val_indices = indices[split_idx:]
+            
+            train_samples = [error_samples[i] for i in train_indices]
+            val_samples = [error_samples[i] for i in val_indices]
         
         logger.info(f"Fine-tuning on {len(train_samples)} train samples, {len(val_samples)} validation samples")
         
@@ -579,7 +604,13 @@ class FineTuner:
         
         # Prepare processed data
         train_data = self._prepare_processed_data(train_samples)
-        val_data = self._prepare_processed_data(val_samples)
+        
+        # Only prepare validation data if we have validation samples
+        val_data = None
+        if val_samples:
+            val_data = self._prepare_processed_data(val_samples)
+        else:
+            logger.info("No validation samples available, skipping validation during training")
         
         # Verify data format
         if train_data:
@@ -645,7 +676,13 @@ class FineTuner:
                 return dict(item)
         
         train_dataset = SimpleDataset(train_data)
-        val_dataset = SimpleDataset(val_data)
+        
+        # Only create validation dataset if we have validation data
+        val_dataset = None
+        if val_data:
+            val_dataset = SimpleDataset(val_data)
+        else:
+            logger.info("No validation dataset created (no validation samples)")
         
         # Training arguments
         output_dir = self.output_dir if self.output_dir else Path("models/finetuned")
@@ -867,7 +904,7 @@ class FineTuner:
             model=self.model,
             args=training_args,
             train_dataset=train_dataset,
-            eval_dataset=val_dataset if len(val_dataset) > 0 else None,
+            eval_dataset=val_dataset if (val_dataset is not None and len(val_dataset) > 0) else None,
             data_collator=data_collator
         )
         
@@ -885,9 +922,15 @@ class FineTuner:
         # Simple evaluation (using loss as proxy)
         # Use the same data collator as training to handle variable-length sequences
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, collate_fn=data_collator)
-        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=data_collator)
         final_train_accuracy = self._evaluate_simple(train_loader)
-        final_val_accuracy = self._evaluate_simple(val_loader)
+        
+        # Only evaluate on validation set if we have validation data
+        if val_dataset is not None and len(val_dataset) > 0:
+            val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=data_collator)
+            final_val_accuracy = self._evaluate_simple(val_loader)
+        else:
+            final_val_accuracy = final_train_accuracy  # Use train accuracy as proxy if no validation data
+            logger.info("No validation data available, using train accuracy as proxy")
         initial_accuracy = (final_train_accuracy + final_val_accuracy) / 2  # Estimate
         accuracy_gain = final_val_accuracy - initial_accuracy
         

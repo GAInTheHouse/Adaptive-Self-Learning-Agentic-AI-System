@@ -9,12 +9,62 @@ let performanceMock = null;
 document.addEventListener('DOMContentLoaded', () => {
     initializeTabs();
     initializeTranscriptionMode();
+    initializeModelSelector();
     checkSystemHealth();
     loadDashboard();
     
     // Auto-refresh every 30 seconds
     setInterval(checkSystemHealth, 30000);
 });
+
+// Initialize model selector by loading available models from backend
+async function initializeModelSelector() {
+    const modelSelector = document.getElementById('model-selector');
+    if (!modelSelector) return;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/models/available`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch available models');
+        }
+        
+        const data = await response.json();
+        const models = data.models || [];
+        const defaultModel = data.default || 'wav2vec2-base';
+        
+        // Clear existing options
+        modelSelector.innerHTML = '';
+        
+        // Add options for each available model
+        models.forEach(model => {
+            if (model.is_available) {
+                const option = document.createElement('option');
+                option.value = model.id;  // Use the actual model identifier
+                option.textContent = model.display_name || model.name;
+                if (model.id === defaultModel || model.is_current) {
+                    option.selected = true;
+                }
+                modelSelector.appendChild(option);
+            }
+        });
+        
+        // If no models found, add a fallback
+        if (modelSelector.options.length === 0) {
+            const option = document.createElement('option');
+            option.value = 'wav2vec2-base';
+            option.textContent = 'Wav2Vec2 Base';
+            option.selected = true;
+            modelSelector.appendChild(option);
+        }
+    } catch (e) {
+        console.error('Could not initialize model selector:', e);
+        // Fallback to default options
+        modelSelector.innerHTML = `
+            <option value="wav2vec2-base">Wav2Vec2 Base</option>
+            <option value="wav2vec2-finetuned">Fine-tuned Wav2Vec2</option>
+        `;
+    }
+}
 
 // ==================== TAB NAVIGATION ====================
 function initializeTabs() {
@@ -29,6 +79,12 @@ function initializeTabs() {
 }
 
 function switchTab(tabName) {
+    // Clear any existing auto-refresh intervals when switching tabs
+    if (window.finetuningRefreshInterval) {
+        clearInterval(window.finetuningRefreshInterval);
+        window.finetuningRefreshInterval = null;
+    }
+    
     // Update buttons
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('active');
@@ -58,6 +114,14 @@ function loadTabData(tabName) {
         case 'finetuning':
             refreshFinetuningStatus();
             refreshJobs();
+            // Auto-refresh fine-tuning status every 5 seconds when tab is active
+            clearInterval(window.finetuningRefreshInterval);
+            window.finetuningRefreshInterval = setInterval(() => {
+                if (document.getElementById('finetuning').classList.contains('active')) {
+                    refreshFinetuningStatus();
+                    refreshJobs();
+                }
+            }, 5000);
             break;
         case 'models':
             loadModelInfo();
@@ -66,6 +130,10 @@ function loadTabData(tabName) {
         case 'monitoring':
             refreshPerformanceMetrics();
             refreshTrends();
+            break;
+        case 'transcribe':
+            // Ensure model selector is set to fine-tuned if available
+            initializeModelSelector();
             break;
     }
 }
@@ -137,7 +205,8 @@ async function loadDashboard() {
 
 async function loadModelInfo() {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/models/info?model=wav2vec2-finetuned`);
+        // Get current model (will return fine-tuned if available, else base)
+        const response = await fetch(`${API_BASE_URL}/api/models/info`);
         const data = await response.json();
         
         const container = document.getElementById('model-info');
@@ -430,9 +499,6 @@ async function loadFailedCases(pageDirection = 0) {
                 <div class="case-item" onclick="showCaseDetails('${caseItem.case_id}')">
                     <div class="case-header">
                         <span class="case-id">${caseItem.case_id}</span>
-                        <span class="badge ${caseItem.corrected_transcript ? 'badge-success' : 'badge-warning'}">
-                            ${caseItem.corrected_transcript ? 'Corrected' : 'Uncorrected'}
-                        </span>
                     </div>
                     <div class="case-transcript">${(caseItem.original_transcript || '').substring(0, 120)}...</div>
                     <div class="case-meta">
@@ -571,7 +637,7 @@ async function prepareDataset() {
 async function refreshDatasets() {
     const container = document.getElementById('datasets-list');
     container.innerHTML = '<div class="loading">Loading...</div>';
-    const samplePath = 'data/sample_recordings/';
+    const samplePath = 'data/sample_recordings_for_UI/';
     try {
         const response = await fetch(`${API_BASE_URL}/api/data/sample-recordings`);
         if (!response.ok) throw new Error('Failed to load sample recordings');
@@ -604,7 +670,14 @@ async function refreshDatasets() {
 async function refreshFinetuningStatus() {
     const container = document.getElementById('finetuning-status');
     try {
-        const response = await fetch(`${API_BASE_URL}/api/finetuning/status`);
+        // Add cache-busting timestamp to ensure fresh data
+        const timestamp = new Date().getTime();
+        const response = await fetch(`${API_BASE_URL}/api/finetuning/status?t=${timestamp}`, {
+            cache: 'no-cache',
+            headers: {
+                'Cache-Control': 'no-cache'
+            }
+        });
         if (!response.ok) {
             throw new Error('Failed to fetch status');
         }
@@ -615,18 +688,59 @@ async function refreshFinetuningStatus() {
         const errorCount = orchestrator.error_cases_count || 0;
         const totalJobs = orchestrator.total_jobs || 0;
         const activeJobs = orchestrator.active_jobs || 0;
+        const minErrorCases = orchestrator.min_error_cases || 100;
+        const casesNeeded = orchestrator.cases_needed || 0;
+        const casesNeededMessage = orchestrator.cases_needed_message || '';
+        const shouldTrigger = orchestrator.should_trigger || false;
+        
+        // Determine status badge color
+        let statusBadgeClass = 'badge-secondary';
+        if (status === 'ready' || status === 'operational') {
+            statusBadgeClass = 'badge-success';
+        } else if (status === 'active') {
+            statusBadgeClass = 'badge-info';
+        } else if (status === 'unavailable') {
+            statusBadgeClass = 'badge-secondary';
+        } else if (status === 'error') {
+            statusBadgeClass = 'badge-danger';
+        } else {
+            statusBadgeClass = 'badge-warning';
+        }
         
         const html = `
             <div class="stat-row">
                 <span class="stat-label">Status</span>
                 <span class="stat-value">
-                    <span class="badge ${status === 'operational' ? 'badge-success' : status === 'unavailable' ? 'badge-secondary' : 'badge-warning'}">${status}</span>
+                    <span class="badge ${statusBadgeClass}">${status}</span>
                 </span>
             </div>
             <div class="stat-row">
                 <span class="stat-label">Error Cases</span>
-                <span class="stat-value">${errorCount}</span>
+                <span class="stat-value">${errorCount} / ${minErrorCases}</span>
             </div>
+            <div class="stat-row">
+                <span class="stat-label">Threshold</span>
+                <span class="stat-value">${minErrorCases} cases minimum</span>
+            </div>
+            ${casesNeeded > 0 ? `
+            <div class="stat-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0;">
+                <span class="stat-label" style="color: #f39c12;">
+                    <i class="fas fa-info-circle"></i> Status
+                </span>
+                <span class="stat-value" style="color: #f39c12; font-weight: 500;">
+                    ${casesNeededMessage}
+                </span>
+            </div>
+            ` : shouldTrigger ? `
+            <div class="stat-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0;">
+                <span class="stat-label" style="color: #27ae60;">
+                    <i class="fas fa-check-circle"></i> Status
+                </span>
+                <span class="stat-value" style="color: #27ae60; font-weight: 500;">
+                    Ready to trigger fine-tuning
+                </span>
+            </div>
+            ` : ''}
             <div class="stat-row">
                 <span class="stat-label">Total Jobs</span>
                 <span class="stat-value">${totalJobs}</span>
@@ -810,14 +924,21 @@ async function refreshPerformanceMetrics() {
     }
     
     const stats = data?.overall_stats || {};
+    
+    // Use evaluation results for baseline and current (fine-tuned) model
+    const baselineWer = evalData.baseline?.wer ?? stats.baseline_wer ?? 0.36;
+    const baselineCer = evalData.baseline?.cer ?? stats.baseline_cer ?? 0.13;
+    const currentWer = evalData.finetuned?.wer ?? stats.finetuned_wer ?? baselineWer;
+    const currentCer = evalData.finetuned?.cer ?? stats.finetuned_cer ?? baselineCer;
+    
     performanceMock = {
         total_inferences: stats.total_inferences ?? 0,
         avg_inference_time: stats.avg_inference_time ?? 0.0,
         avg_error_score: stats.avg_error_score ?? 0.0,
-        wer_baseline: evalData.baseline?.wer ?? stats.baseline_wer ?? 0.36,
-        wer_finetuned: evalData.finetuned?.wer ?? stats.finetuned_wer ?? 0.36,
-        cer_baseline: evalData.baseline?.cer ?? stats.baseline_cer ?? 0.13,
-        cer_finetuned: evalData.finetuned?.cer ?? stats.finetuned_cer ?? 0.13
+        wer_baseline: baselineWer,
+        wer_finetuned: currentWer,
+        cer_baseline: baselineCer,
+        cer_finetuned: currentCer
     };
     
     const html = `
@@ -838,7 +959,7 @@ async function refreshPerformanceMetrics() {
             <span class="stat-value">${(performanceMock.wer_baseline * 100).toFixed(1)}% / ${((performanceMock.cer_baseline || 0) * 100).toFixed(2)}%</span>
         </div>` : ''}
         ${performanceMock.wer_finetuned !== undefined ? `<div class="stat-row">
-            <span class="stat-label">Fine-tuned WER / CER</span>
+            <span class="stat-label">Current Model WER / CER</span>
             <span class="stat-value">${(performanceMock.wer_finetuned * 100).toFixed(1)}% / ${((performanceMock.cer_finetuned || 0) * 100).toFixed(2)}%</span>
         </div>` : ''}
     `;
@@ -859,10 +980,10 @@ async function refreshTrends() {
         return;
     }
     const baseVal = metric === 'wer' ? (performanceMock?.wer_baseline ?? 0) * 100 : (performanceMock?.cer_baseline ?? 0) * 100;
-    const tunedVal = metric === 'wer' ? (performanceMock?.wer_finetuned ?? 0) * 100 : (performanceMock?.cer_finetuned ?? 0) * 100;
+    const currentVal = metric === 'wer' ? (performanceMock?.wer_finetuned ?? 0) * 100 : (performanceMock?.cer_finetuned ?? 0) * 100;
     const points = [
         { label: 'Baseline', value: baseVal },
-        { label: 'Fine-tuned', value: tunedVal }
+        { label: 'Current Model', value: currentVal }
     ];
     
     const html = `

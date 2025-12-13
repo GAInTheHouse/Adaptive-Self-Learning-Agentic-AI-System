@@ -40,6 +40,7 @@ from src.baseline_model import BaselineSTTModel
 from src.agent.llm_corrector import LlamaLLMCorrector
 from src.evaluation.metrics import STTEvaluator
 from src.agent.fine_tuner import FineTuner, create_finetuner
+from src.utils.model_versioning import get_next_model_version, get_model_version_name
 
 
 class Wav2Vec2FineTuner:
@@ -51,7 +52,7 @@ class Wav2Vec2FineTuner:
     def __init__(
         self,
         model_name: str = "facebook/wav2vec2-base-960h",
-        output_dir: str = "models/finetuned_wav2vec2",
+        output_dir: str = None,  # Will be auto-generated with versioned name if None
         device: str = None,
         use_lora: bool = True,
         lora_rank: int = 8,
@@ -242,8 +243,8 @@ def main():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="models/finetuned_wav2vec2",
-        help="Output directory for fine-tuned model"
+        default=None,
+        help="Output directory for fine-tuned model (auto-generated with versioned name if not specified)"
     )
     parser.add_argument(
         "--num_epochs",
@@ -320,6 +321,13 @@ def main():
     if len(all_files) == 0:
         logger.error("No audio files found!")
         return
+    
+    # Auto-generate output directory with versioned name if not specified
+    if args.output_dir is None:
+        next_version = get_next_model_version()
+        version_name = get_model_version_name(next_version)
+        args.output_dir = f"models/{version_name}"
+        logger.info(f"📦 Auto-generated output directory: {args.output_dir} (version {next_version})")
     
     # Initialize models
     logger.info("Initializing STT model...")

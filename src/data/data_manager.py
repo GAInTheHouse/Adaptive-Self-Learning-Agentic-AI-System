@@ -96,6 +96,10 @@ class DataManager:
         self.local_storage_dir = Path(local_storage_dir)
         self.local_storage_dir.mkdir(parents=True, exist_ok=True)
         
+        # Create audio storage directory for permanent audio files
+        self.audio_storage_dir = self.local_storage_dir / "audio_files"
+        self.audio_storage_dir.mkdir(parents=True, exist_ok=True)
+        
         self.use_gcs = use_gcs
         self.gcs_prefix = gcs_prefix
         
@@ -159,9 +163,10 @@ class DataManager:
     ) -> str:
         """
         Store a failed transcription case.
+        Automatically copies temporary audio files to permanent storage.
         
         Args:
-            audio_path: Path to audio file
+            audio_path: Path to audio file (temporary or permanent)
             original_transcript: Original (failed) transcription
             corrected_transcript: Corrected transcription (if available)
             error_types: List of error types detected
@@ -173,9 +178,37 @@ class DataManager:
         """
         case_id = self._generate_case_id(audio_path, original_transcript)
         
+        # Check if audio file is temporary (in /tmp, /var/folders, or tempfile pattern)
+        audio_path_obj = Path(audio_path)
+        is_temporary = (
+            '/tmp' in str(audio_path_obj) or
+            '/var/folders' in str(audio_path_obj) or
+            str(audio_path_obj.parent).startswith('/var/folders') or
+            'tmp' in audio_path_obj.name.lower()
+        )
+        
+        # Copy to permanent storage if temporary
+        permanent_audio_path = audio_path
+        if is_temporary and audio_path_obj.exists():
+            try:
+                import shutil
+                # Create permanent filename using case_id to avoid conflicts
+                permanent_filename = f"{case_id}_{audio_path_obj.name}"
+                permanent_audio_path_obj = self.audio_storage_dir / permanent_filename
+                
+                # Copy the file
+                shutil.copy2(audio_path_obj, permanent_audio_path_obj)
+                permanent_audio_path = str(permanent_audio_path_obj)
+                logger.info(f"Copied temporary audio file to permanent storage: {permanent_audio_path}")
+            except Exception as e:
+                logger.warning(f"Failed to copy temporary audio file to permanent storage: {e}. Using original path.")
+                permanent_audio_path = audio_path
+        elif not audio_path_obj.exists():
+            logger.warning(f"Audio file does not exist: {audio_path}. Storing path as-is, but fine-tuning may fail.")
+        
         case = FailedCase(
             case_id=case_id,
-            audio_path=audio_path,
+            audio_path=permanent_audio_path,  # Use permanent path
             original_transcript=original_transcript,
             corrected_transcript=corrected_transcript,
             error_types=error_types,
@@ -190,7 +223,7 @@ class DataManager:
         with open(self.failed_cases_file, 'a') as f:
             f.write(json.dumps(case.to_dict()) + '\n')
         
-        logger.info(f"Stored failed case: {case_id}")
+        logger.info(f"Stored failed case: {case_id} (audio: {permanent_audio_path})")
         
         # Sync to GCS if enabled
         if self.use_gcs and self.gcs_manager:
@@ -285,6 +318,10 @@ class DataManager:
     
     def get_statistics(self) -> Dict:
         """Get statistics about stored data."""
+        # Reload data from file to ensure we have the latest count
+        # This ensures statistics are always up-to-date even if the file was modified
+        self._reload_failed_cases()
+        
         total_cases = len(self.failed_cases_cache)
         corrected_cases = len(self.get_corrected_cases())
         
@@ -309,6 +346,23 @@ class DataManager:
             'total_corrections': len(self.corrections_cache),
             'last_updated': datetime.now().isoformat()
         }
+    
+    def _reload_failed_cases(self):
+        """Reload failed cases from file to refresh the cache."""
+        if self.failed_cases_file.exists():
+            # Clear existing cache
+            self.failed_cases_cache.clear()
+            # Reload from file
+            with open(self.failed_cases_file, 'r') as f:
+                for line in f:
+                    if line.strip():
+                        try:
+                            case_data = json.loads(line)
+                            case = FailedCase.from_dict(case_data)
+                            self.failed_cases_cache[case.case_id] = case
+                        except (json.JSONDecodeError, KeyError) as e:
+                            logger.warning(f"Failed to parse failed case line: {e}. Line: {line[:100]}")
+                            continue
     
     def export_to_dataframe(self) -> pd.DataFrame:
         """Export failed cases to pandas DataFrame for analysis."""

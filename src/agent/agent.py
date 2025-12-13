@@ -169,10 +169,10 @@ class STTAgent:
                             'error_type': 'llm_correction',
                             'original': transcript,
                             'corrected': corrected_transcript,
-                            'method': 'gemma_llm',
+                            'method': 'llama_llm',
                             'confidence': 0.8  # LLM corrections have high confidence
                         })
-                        logger.info("✅ Applied LLM-based correction using Gemma")
+                        logger.info("✅ Applied LLM-based correction using Llama")
                     else:
                         # Fall back to rule-based correction
                         corrected_transcript, corrections_applied = self._apply_corrections(
@@ -194,7 +194,7 @@ class STTAgent:
             
             # Record corrections for learning
             for error in errors:
-                if error.suggested_correction or correction_method.startswith("gemma"):
+                if error.suggested_correction or correction_method.startswith("llama"):
                     self.self_learner.record_error(
                         error_type=error.error_type,
                         transcript=transcript,
@@ -203,7 +203,7 @@ class STTAgent:
                             'confidence': baseline_result.get('confidence'),
                             'correction_method': correction_method
                         },
-                        correction=corrected_transcript if correction_method.startswith("gemma") else error.suggested_correction
+                        correction=corrected_transcript if correction_method.startswith("llama") else error.suggested_correction
                     )
         
         # Step 5: Record errors for learning (even if not corrected)
@@ -405,8 +405,10 @@ class STTAgent:
                         'error_type': error_type
                     })
         
-        if len(error_samples) < 10:
-            logger.warning(f"Insufficient error samples ({len(error_samples)}), skipping fine-tuning")
+        from src.constants import RECOMMENDED_SAMPLES_FOR_FINETUNING
+        
+        if len(error_samples) < RECOMMENDED_SAMPLES_FOR_FINETUNING:
+            logger.warning(f"Insufficient error samples ({len(error_samples)}), skipping fine-tuning (recommended: {RECOMMENDED_SAMPLES_FOR_FINETUNING}+)")
             return False
         
         # Get current model performance for comparison

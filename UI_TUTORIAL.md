@@ -24,7 +24,6 @@ Welcome to the Adaptive Self-Learning Agentic AI System Control Panel! This guid
 - Python 3.8 or higher
 - Virtual environment (recommended)
 - Required dependencies installed (see `requirements.txt`)
-- For Gemma 3n: Apple Silicon Mac (M1/M2/M3) with MLX installed
 
 ### Starting the Control Panel
 
@@ -111,9 +110,8 @@ Six main tabs for different functionalities:
 #### Step-by-Step Transcription Process:
 
 1. **Select STT Model** (Dropdown):
-   - **Gemma Base v1**: Original model with poor performance (Whisper Tiny)
-   - **Gemma Fine-tuned v2**: Improved model after fine-tuning (Gemma 3n)
-   - **Gemma Fine-tuned v3**: Best performance model (Gemma 3n)
+   - **Wav2Vec2 Base**: Baseline model (facebook/wav2vec2-base-960h)
+   - **Fine-tuned Wav2Vec2**: Improved model after fine-tuning
 
 2. **Choose Transcription Mode**:
    - **Agent (Recommended)**: Full pipeline with error detection and LLM correction
@@ -272,30 +270,23 @@ Six main tabs for different functionalities:
 
 ### Understanding Model Versions
 
-#### Gemma Base v1 (Original - Poor Performance)
-- **Model**: Whisper Tiny (39M parameters)
+#### Wav2Vec2 Base (Baseline)
+- **Model**: facebook/wav2vec2-base-960h
 - **Framework**: PyTorch
-- **Performance**: Lower accuracy, faster inference
-- **Use Case**: Demonstrates poor base performance before fine-tuning
+- **Performance**: Baseline accuracy (~36% WER on real-world data)
+- **Use Case**: Demonstrates baseline performance before fine-tuning
 - **When to use**: Show the "before" state in your demo
 
-#### Gemma Fine-tuned v2 (Improved)
-- **Model**: Gemma 3n E2B (2B effective parameters)
-- **Framework**: MLX (Apple Silicon optimized)
-- **Performance**: Better accuracy after fine-tuning
-- **Use Case**: Shows improvement after first fine-tuning cycle
-- **When to use**: Demonstrate improvement after fine-tuning
-
-#### Gemma Fine-tuned v3 (Best Performance)
-- **Model**: Gemma 3n E2B (2B effective parameters)
-- **Framework**: MLX (Apple Silicon optimized)
-- **Performance**: Best accuracy after multiple fine-tuning cycles
-- **Use Case**: Shows optimal performance
-- **When to use**: Final demonstration of system capabilities
+#### Fine-tuned Wav2Vec2 (Improved)
+- **Model**: Fine-tuned Wav2Vec2 (trained on failed cases)
+- **Framework**: PyTorch
+- **Performance**: Improved accuracy after fine-tuning
+- **Use Case**: Shows improvement after fine-tuning on domain-specific data
+- **When to use**: Demonstrate improved performance after fine-tuning
 
 ### Model Selection Strategy for Demo:
 
-1. **Start with Base v1**: Upload audio → See poor transcription
+1. **Start with Baseline**: Upload audio → See baseline transcription
 2. **Show Error Detection**: Notice errors in original transcript
 3. **Show LLM Correction**: See refined transcript in right column
 4. **Explain Fine-tuning**: Mention that errors are saved for training
@@ -316,7 +307,7 @@ Six main tabs for different functionalities:
   - Word substitutions
 
 **LLM Refined Transcript (Right):**
-- Corrected by Gemma-2b-it LLM
+- Corrected by Llama LLM (via Ollama)
 - Improvements:
   - Fixed spelling errors
   - Corrected medical terms
@@ -423,12 +414,12 @@ You can manually trigger fine-tuning:
 - Check server logs for detailed error
 - Verify model is loaded (check Dashboard)
 
-#### 3. "Gemma 3n not available"
-**Problem**: Fine-tuned models fall back to Whisper
+#### 3. "Fine-tuned model not found"
+**Problem**: Fine-tuned model cannot be loaded
 **Solutions**:
-- Install MLX: `pip install mlx mlx-lm mlx-vlm`
-- Ensure you're on Apple Silicon Mac (M1/M2/M3)
-- Check MLX installation: `python -c "import mlx; print('MLX OK')"`
+- Ensure fine-tuned model exists at `models/finetuned_wav2vec2/`
+- Run fine-tuning script first if model doesn't exist
+- Check server logs for detailed error messages
 
 #### 4. Slow Transcription
 **Problem**: Transcription takes too long
@@ -468,8 +459,8 @@ You can manually trigger fine-tuning:
 ### System Architecture
 
 **Components:**
-1. **STT Models**: Speech-to-text transcription (Whisper/Gemma 3n)
-2. **LLM Corrector**: Gemma-2b-it for error detection and correction
+1. **STT Models**: Speech-to-text transcription (Wav2Vec2)
+2. **LLM Corrector**: Llama LLM (via Ollama) for error detection and correction
 3. **Error Detector**: Heuristic-based error detection
 4. **Data Manager**: Stores failed cases and manages datasets
 5. **Fine-tuning Coordinator**: Orchestrates model fine-tuning
@@ -478,7 +469,7 @@ You can manually trigger fine-tuning:
 
 1. **Audio Upload** → STT Model transcribes
 2. **Error Detection** → Detects errors in transcript
-3. **LLM Correction** → Gemma LLM refines transcript
+3. **LLM Correction** → Llama LLM refines transcript
 4. **Case Recording** → Saves errors if enabled
 5. **Fine-tuning** → Uses cases to improve model
 
@@ -504,16 +495,16 @@ You can manually trigger fine-tuning:
 
 ### Performance Expectations
 
-- **Base Model (Whisper Tiny)**: 
+- **Base Model (Wav2Vec2 Base)**: 
   - Speed: ~1-2 seconds
-  - Accuracy: Lower (demonstrates need for fine-tuning)
+  - Accuracy: ~36% WER on real-world data (demonstrates need for fine-tuning)
   
-- **Fine-tuned Models (Gemma 3n)**:
-  - Speed: ~2-5 seconds (MLX on Apple Silicon)
-  - Accuracy: Higher (improved after fine-tuning)
+- **Fine-tuned Model (Fine-tuned Wav2Vec2)**:
+  - Speed: ~1-2 seconds
+  - Accuracy: Improved after fine-tuning on domain-specific data
 
 - **LLM Correction**:
-  - Processing time: 10-15 seconds
+  - Processing time: <1 second (with Ollama)
   - Improves transcript quality significantly
 
 ### Security & Privacy
@@ -525,7 +516,7 @@ You can manually trigger fine-tuning:
 
 ### Limitations
 
-1. **Gemma 3n**: Requires Apple Silicon Mac and MLX
+1. **Ollama LLM**: Requires Ollama server running locally with Llama models installed
 2. **Model Loading**: First load takes time (downloads from Hugging Face)
 3. **Memory**: Large models require sufficient RAM
 4. **Audio Length**: Very long audio files may timeout
@@ -562,9 +553,9 @@ Here's a suggested flow for demonstrating the system:
    - Explain components
 
 2. **Base Model Demo** (Transcribe Tab):
-   - Select "Gemma Base v1"
-   - Upload health sector audio
-   - Show poor transcription in left column
+   - Select "Wav2Vec2 Base"
+   - Upload audio file
+   - Show baseline transcription in left column
    - Explain errors
 
 3. **LLM Correction**:
@@ -577,7 +568,7 @@ Here's a suggested flow for demonstrating the system:
    - Explain this feeds fine-tuning
 
 5. **Fine-tuned Model** (Transcribe Tab):
-   - Switch to "Gemma Fine-tuned v3"
+   - Switch to "Fine-tuned Wav2Vec2"
    - Upload same audio
    - Show improved transcription
    - Compare with base model results
@@ -594,7 +585,6 @@ Here's a suggested flow for demonstrating the system:
 - **Project Documentation**: See `docs/` directory
 - **API Documentation**: Built-in at `/docs` endpoint
 - **Setup Guide**: See `SETUP_INSTRUCTIONS.md`
-- **Gemma 3n Setup**: See `GEMMA3N_SETUP.md`
 
 ---
 

@@ -17,6 +17,10 @@ from .version_control import DataVersionControl
 from .metadata_tracker import MetadataTracker
 from ..utils.gcs_utils import GCSManager
 from .wandb_tracker import WandbTracker
+from ..constants import (
+    MIN_ERROR_CASES_FOR_TRIGGER,
+    MIN_CORRECTED_CASES_FOR_TRIGGER
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -26,8 +30,8 @@ logger = logging.getLogger(__name__)
 class FinetuningConfig:
     """Configuration for fine-tuning orchestration."""
     # Trigger settings
-    min_error_cases: int = 100  # Minimum cases before triggering
-    min_corrected_cases: int = 50  # Minimum corrected cases
+    min_error_cases: int = MIN_ERROR_CASES_FOR_TRIGGER  # Minimum cases before triggering
+    min_corrected_cases: int = MIN_CORRECTED_CASES_FOR_TRIGGER  # Minimum corrected cases
     trigger_on_error_rate: bool = True  # Trigger if error rate exceeds threshold
     error_rate_threshold: float = 0.15  # 15% error rate
     
