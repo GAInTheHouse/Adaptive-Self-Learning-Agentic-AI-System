@@ -12,8 +12,8 @@ import json
 import time
 from datetime import datetime  
 
-from jiwer import wer, cer
 import numpy as np
+from src.evaluation.metrics import STTEvaluator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -79,6 +79,7 @@ class AgentEvaluator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
         self.results: List[CorrectionResult] = []
+        self.evaluator = STTEvaluator()
         
         logger.info("Agent Evaluator initialized")
     
@@ -117,10 +118,10 @@ class AgentEvaluator:
         corrected_cer = 0.0
         
         if reference_transcript:
-            original_wer = wer(reference_transcript, original_transcript)
-            original_cer = cer(reference_transcript, original_transcript)
-            corrected_wer = wer(reference_transcript, corrected_transcript)
-            corrected_cer = cer(reference_transcript, corrected_transcript)
+            original_wer = self.evaluator.calculate_wer(reference_transcript, original_transcript)
+            original_cer = self.evaluator.calculate_cer(reference_transcript, original_transcript)
+            corrected_wer = self.evaluator.calculate_wer(reference_transcript, corrected_transcript)
+            corrected_cer = self.evaluator.calculate_cer(reference_transcript, corrected_transcript)
         
         # Calculate improvements (negative means correction made it worse)
         wer_improvement = original_wer - corrected_wer

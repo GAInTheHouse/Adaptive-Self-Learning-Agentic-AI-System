@@ -8,12 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-import tempfile
 import os
 import time
 import asyncio
 import random
-import librosa
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 import json
@@ -27,7 +25,8 @@ from src.data.finetuning_coordinator import FinetuningCoordinator
 from src.data.finetuning_orchestrator import FinetuningConfig
 from src.evaluation.metrics import STTEvaluator
 from src.agent.llm_corrector import LlamaLLMCorrector
-from jiwer import wer, cer
+from src.utils.api_helpers import handle_audio_upload, transcribe_with_timing, transcribe_agent_with_timing
+from src.utils.file_utils import cleanup_temp_file, load_audio_duration
 from src.constants import (
     MIN_SAMPLES_FOR_FINETUNING,
     RECOMMENDED_SAMPLES_FOR_FINETUNING,
@@ -776,6 +775,7 @@ async def transcribe_baseline(
     Transcribe audio with baseline model only (no LLM correction)
     Faster than agent mode since no LLM processing is involved
     """
+    tmp_path = None
     try:
         # Get the appropriate model instance
         stt_model, _ = get_model_and_agent(model)
@@ -783,14 +783,11 @@ async def transcribe_baseline(
         # Verify which model is actually being used
         logger.info(f"📝 Transcribing with model: {model} -> Actual: {stt_model.model_name}, Path: {stt_model.model_path}")
         
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-            content = await file.read()
-            tmp.write(content)
-            tmp_path = tmp.name
+        # Save uploaded file temporarily
+        tmp_path = await handle_audio_upload(file)
         
-        start = time.time()
-        result = stt_model.transcribe(tmp_path)
-        result["inference_time_seconds"] = time.time() - start
+        # Transcribe with timing
+        result = transcribe_with_timing(stt_model, tmp_path)
         result["model_used"] = model
         result["model_name"] = stt_model.model_name  # Include actual model name
         result["model_path"] = stt_model.model_path  # Include model path for verification
@@ -806,11 +803,15 @@ async def transcribe_baseline(
         error_score = result.get("error_detection", {}).get("error_score", 0.0)
         perf_counters["sum_error_scores"] += error_score
         
-        os.remove(tmp_path)
         return result
     
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+    finally:
+        if tmp_path:
+            cleanup_temp_file(tmp_path)
 
 
 @app.post("/api/transcribe/agent")
@@ -833,27 +834,15 @@ async def transcribe_agent(
         logger.info(f"📝 Transcribing with agent. Model: {model} -> Actual: {stt_model.model_name}, Path: {stt_model.model_path}")
         logger.info(f"   Agent's baseline_model: {stt_agent.baseline_model.model_name}, Path: {stt_agent.baseline_model.model_path}")
         
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-            content = await file.read()
-            tmp.write(content)
-            tmp_path = tmp.name
+        # Save uploaded file temporarily
+        tmp_path = await handle_audio_upload(file)
         
-        # Get audio length
-        try:
-            audio, sr = librosa.load(tmp_path, sr=16000)
-            audio_length = len(audio) / sr
-        except Exception as e:
-            print(f"Warning: Could not load audio for length calculation: {e}")
-            audio_length = None
-        
-        # Transcribe with agent (this includes STT + LLM correction if enabled)
-        start = time.time()
-        result = stt_agent.transcribe_with_agent(
-            audio_path=tmp_path,
-            audio_length_seconds=audio_length,
+        # Transcribe with agent (includes audio length calculation)
+        result = transcribe_agent_with_timing(
+            stt_agent,
+            tmp_path,
             enable_auto_correction=auto_correction
         )
-        result["inference_time_seconds"] = result.get("inference_time_seconds", time.time() - start)
         
         result["model_used"] = model
         result["model_name"] = stt_model.model_name  # Include actual model name for verification
@@ -919,8 +908,6 @@ async def transcribe_agent(
             except Exception as e:
                 print(f"Failed to record error: {e}")
         
-        os.remove(tmp_path)
-        
         # Update perf counters
         perf_counters["total_inferences"] += 1
         perf_counters["total_inference_time"] += result.get("inference_time_seconds", 0.0)
@@ -931,10 +918,15 @@ async def transcribe_agent(
 
         return result
     
+    except HTTPException:
+        raise
     except Exception as e:
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+    finally:
+        if tmp_path:
+            cleanup_temp_file(tmp_path)
 
 
 # ==================== AGENT MANAGEMENT ====================
