@@ -186,7 +186,17 @@ class OllamaLLM:
                 prompt=prompt,
                 **kwargs
             )
-            return response.get('response', '')
+            
+            # Validate response type
+            if not isinstance(response, dict):
+                raise RuntimeError(f"Unexpected response type: {type(response)}. Expected dict.")
+            
+            # Extract and validate result
+            result = response.get('response', '')
+            if not result:
+                logger.warning("Ollama returned empty response")
+            
+            return result
         except Exception as e:
             logger.error(f"Ollama generation failed: {e}")
             raise RuntimeError(f"Failed to generate text with Ollama: {e}")
@@ -212,7 +222,21 @@ class OllamaLLM:
                 messages=messages,
                 **kwargs
             )
-            return response.get('message', {}).get('content', '')
+            
+            # Validate response type
+            if not isinstance(response, dict):
+                raise RuntimeError(f"Unexpected response type: {type(response)}. Expected dict.")
+            
+            # Extract and validate result
+            message = response.get('message', {})
+            if not isinstance(message, dict):
+                raise RuntimeError(f"Unexpected message type: {type(message)}. Expected dict.")
+            
+            result = message.get('content', '')
+            if not result:
+                logger.warning("Ollama returned empty chat response")
+            
+            return result
         except Exception as e:
             logger.error(f"Ollama chat failed: {e}")
             raise RuntimeError(f"Failed to chat with Ollama: {e}")

@@ -194,31 +194,30 @@ class STTAgent:
             
             # Record corrections for learning
             for error in errors:
-                if error.suggested_correction or correction_method.startswith("llama"):
-                    self.self_learner.record_error(
-                        error_type=error.error_type,
-                        transcript=transcript,
-                        context={
-                            'audio_length': audio_length_seconds,
-                            'confidence': baseline_result.get('confidence'),
-                            'correction_method': correction_method
-                        },
-                        correction=corrected_transcript if correction_method.startswith("llama") else error.suggested_correction
-                    )
-        
-        # Step 5: Record errors for learning (even if not corrected)
-        error_count = len(errors)
-        for error in errors:
-            self.self_learner.record_error(
-                error_type=error.error_type,
-                transcript=transcript,
-                context={
+                # Build comprehensive context
+                context = {
                     'audio_path': audio_path,  # Store path for fine-tuning
                     'audio_length': audio_length_seconds,
                     'confidence': baseline_result.get('confidence'),
                     'error_confidence': error.confidence
                 }
-            )
+                
+                # Add correction info if available
+                correction = None
+                if error.suggested_correction or correction_method.startswith("llama"):
+                    context['correction_method'] = correction_method
+                    correction = corrected_transcript if correction_method.startswith("llama") else error.suggested_correction
+                
+                # Record error with all context (single recording per error)
+                self.self_learner.record_error(
+                    error_type=error.error_type,
+                    transcript=transcript,
+                    context=context,
+                    correction=correction
+                )
+        
+        # Step 5: Calculate error count for metrics
+        error_count = len(errors)
         
         # Step 6: Update adaptive scheduler and check for fine-tuning trigger (Week 3)
         fine_tuning_triggered = False
