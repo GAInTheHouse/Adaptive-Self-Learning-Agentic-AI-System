@@ -66,6 +66,13 @@ class BaselineSTTModel:
                 self.is_ctc = True
                 self.model_path = str(finetuned_path)  # Track that we loaded from fine-tuned path
                 
+                # Extract version number from path name (e.g., finetuned_wav2vec2_v4 -> v4)
+                version_match = re.match(r'finetuned_wav2vec2_v(\d+)', finetuned_path.name)
+                version_suffix = ""
+                if version_match:
+                    version_num = version_match.group(1)
+                    version_suffix = f" v{version_num}"
+                
                 # Load metadata to get the actual model name
                 metadata_file = finetuned_path / "model_metadata.json"
                 if metadata_file.exists():
@@ -75,17 +82,17 @@ class BaselineSTTModel:
                     metadata_model_name = metadata.get("model_name", "")
                     # Only use metadata name if it's not a HuggingFace path
                     if metadata_model_name and "facebook" not in metadata_model_name.lower() and "/" not in metadata_model_name:
-                        self.model_name = metadata_model_name
+                        self.model_name = metadata_model_name + version_suffix
                     else:
-                        self.model_name = "Fine-tuned Wav2Vec2"
+                        self.model_name = "Fine-tuned Wav2Vec2" + version_suffix
                     logger.info(f"✓ Fine-tuned model loaded successfully: {self.model_name}")
                     logger.info(f"  Model saved at: {metadata.get('saved_at', 'unknown')}")
                     base_model_in_metadata = metadata.get("model_name", "unknown")
                     if base_model_in_metadata and base_model_in_metadata != self.model_name:
                         logger.info(f"  Base model: {base_model_in_metadata}")
                 else:
-                    self.model_name = "Fine-tuned Wav2Vec2"
-                    logger.info("✓ Fine-tuned model loaded successfully (no metadata found)")
+                    self.model_name = "Fine-tuned Wav2Vec2" + version_suffix
+                    logger.info(f"✓ Fine-tuned model loaded successfully (no metadata found): {self.model_name}")
                 
                 # Verify model is actually different from baseline
                 param_count = sum(p.numel() for p in self.model.parameters())

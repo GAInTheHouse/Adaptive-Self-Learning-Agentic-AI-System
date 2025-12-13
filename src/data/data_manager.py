@@ -444,4 +444,25 @@ class DataManager:
             self.corrections_file.unlink()
         
         logger.info("Cleared all local data")
+    
+    def clear_failed_cases(self):
+        """
+        Clear all failed cases (error cases) after they've been used for fine-tuning.
+        This resets the error case count to zero.
+        """
+        self.failed_cases_cache.clear()
+        
+        if self.failed_cases_file.exists():
+            self.failed_cases_file.unlink()
+            logger.info("Cleared all failed cases (error cases reset to zero)")
+        
+        # Also clear from GCS if enabled
+        if self.use_gcs and self.gcs_manager:
+            try:
+                gcs_path = f"{self.gcs_prefix}/failed_cases.jsonl"
+                # Delete from GCS (upload empty file or delete)
+                # For now, we'll just log - GCS deletion would require additional API calls
+                logger.info(f"Failed cases cleared locally. GCS path: {gcs_path}")
+            except Exception as e:
+                logger.warning(f"Could not sync failed cases clearing to GCS: {e}")
 

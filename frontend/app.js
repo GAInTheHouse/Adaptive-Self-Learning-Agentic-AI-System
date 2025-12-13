@@ -85,6 +85,12 @@ function switchTab(tabName) {
         window.finetuningRefreshInterval = null;
     }
     
+    // Clear any job polling intervals
+    if (window.jobPollInterval) {
+        clearInterval(window.jobPollInterval);
+        window.jobPollInterval = null;
+    }
+    
     // Update buttons
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('active');
@@ -204,32 +210,70 @@ async function loadDashboard() {
 }
 
 async function loadModelInfo() {
+    const container = document.getElementById('model-info');
+    if (!container) return;
+    
     try {
         // Get current model (will return fine-tuned if available, else base)
         const response = await fetch(`${API_BASE_URL}/api/models/info`);
         const data = await response.json();
         
-        const container = document.getElementById('model-info');
-    const html = `
-        <div class="stat-row">
-            <span class="stat-label">Model Name</span>
-            <span class="stat-value">${data.name}</span>
-        </div>
-        <div class="stat-row">
-            <span class="stat-label">Parameters</span>
-            <span class="stat-value">${data.parameters.toLocaleString()}</span>
-        </div>
-        <div class="stat-row">
-            <span class="stat-label">Trainable Params</span>
-            <span class="stat-value">${data.trainable_params.toLocaleString()}</span>
-        </div>
-    `;
+        // Get WER/CER from the same response (no separate API call needed)
+        const wer = data.wer;
+        const cer = data.cer;
+        
+        // Build WER/CER display
+        let metricsHtml = '';
+        if (wer !== null && wer !== undefined && cer !== null && cer !== undefined) {
+            metricsHtml = `
+                <div class="stat-row">
+                    <span class="stat-label">WER</span>
+                    <span class="stat-value">${(wer * 100).toFixed(2)}%</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">CER</span>
+                    <span class="stat-value">${(cer * 100).toFixed(2)}%</span>
+                </div>
+            `;
+        } else {
+            metricsHtml = `
+                <div class="stat-row">
+                    <span class="stat-label">Performance</span>
+                    <span class="stat-value">Not Evaluated</span>
+                </div>
+            `;
+        }
+        
+        const html = `
+            <div class="stat-row">
+                <span class="stat-label">Model Name</span>
+                <span class="stat-value">${data.name}</span>
+            </div>
+            ${metricsHtml}
+            <div class="stat-row">
+                <span class="stat-label">Parameters</span>
+                <span class="stat-value">${data.parameters.toLocaleString()}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Trainable Params</span>
+                <span class="stat-value">${data.trainable_params.toLocaleString()}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Device</span>
+                <span class="stat-value">${data.device}</span>
+            </div>
+        `;
         
         container.innerHTML = html;
         
         // Also update current model info in models tab
-        document.getElementById('current-model-info').innerHTML = html;
+        const modelsTabContainer = document.getElementById('current-model-info');
+        if (modelsTabContainer) {
+            modelsTabContainer.innerHTML = html;
+        }
     } catch (error) {
+        console.error('Error loading model information:', error);
+        container.innerHTML = '<p class="text-danger">Failed to load model information.</p>';
         showToast('Failed to load model information', 'error');
     }
 }
@@ -772,25 +816,111 @@ async function triggerFinetuning() {
         return;
     }
     
+    // Show "Running Fine-Tuning" message
+    const statusMessageDiv = document.getElementById('finetuning-status-message');
+    const statusText = document.getElementById('finetuning-status-text');
+    statusMessageDiv.style.display = 'block';
+    statusText.innerHTML = '<span class="badge badge-info">Running Fine-Tuning...</span>';
+    
+    // Disable the trigger button
+    const triggerBtn = document.querySelector('button[onclick="triggerFinetuning()"]');
+    const originalBtnText = triggerBtn.innerHTML;
+    triggerBtn.disabled = true;
+    triggerBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    
+    let jobId = null;
+    let pollCount = 0;
+    const maxPollAttempts = 60; // Poll for up to 5 minutes (60 * 5 seconds)
+    
     try {
         const response = await fetch(`${API_BASE_URL}/api/finetuning/trigger?force=${force}`, {
             method: 'POST'
         });
         
         if (response.status === 503) {
+            statusMessageDiv.style.display = 'none';
+            triggerBtn.disabled = false;
+            triggerBtn.innerHTML = originalBtnText;
             showToast('Fine-tuning coordinator not available', 'error');
             return;
         }
         
         const result = await response.json();
         
-        if (result.status === 'triggered') {
-            showToast(`Fine-tuning job triggered: ${result.job_id}`, 'success');
-            refreshJobs();
+        if (result.status === 'triggered' || result.status === 'not_triggered') {
+            if (result.status === 'triggered') {
+                jobId = result.job_id;
+                showToast(`Fine-tuning job triggered: ${jobId}`, 'success');
+                
+                // Start polling for the job to appear in the list
+                // Store in window so we can clean it up if needed
+                window.jobPollInterval = setInterval(async () => {
+                    pollCount++;
+                    
+                    try {
+                        // Refresh jobs list
+                        await refreshJobs();
+                        
+                        // Check if job appears in the list
+                        const jobsResponse = await fetch(`${API_BASE_URL}/api/finetuning/jobs`);
+                        if (jobsResponse.ok) {
+                            const jobsData = await jobsResponse.json();
+                            const jobs = jobsData.jobs || [];
+                            const job = jobs.find(j => j.job_id === jobId);
+                            
+                            if (job) {
+                                // Job found! Show "Finished" message
+                                clearInterval(window.jobPollInterval);
+                                window.jobPollInterval = null;
+                                statusText.innerHTML = '<span class="badge badge-success">Finished</span>';
+                                triggerBtn.disabled = false;
+                                triggerBtn.innerHTML = originalBtnText;
+                                
+                                // Hide status message after 5 seconds
+                                setTimeout(() => {
+                                    statusMessageDiv.style.display = 'none';
+                                }, 5000);
+                                
+                                // Refresh status
+                                refreshFinetuningStatus();
+                                return;
+                            }
+                        }
+                        
+                        // If we've exceeded max attempts, stop polling
+                        if (pollCount >= maxPollAttempts) {
+                            clearInterval(window.jobPollInterval);
+                            window.jobPollInterval = null;
+                            statusText.innerHTML = '<span class="badge badge-warning">Job may still be processing. Check jobs list.</span>';
+                            triggerBtn.disabled = false;
+                            triggerBtn.innerHTML = originalBtnText;
+                            showToast('Job may still be processing. Please check the jobs list.', 'warning');
+                        }
+                    } catch (error) {
+                        console.error('Error polling for job:', error);
+                        // Continue polling on error
+                    }
+                }, 5000); // Poll every 5 seconds
+            } else {
+                statusMessageDiv.style.display = 'none';
+                triggerBtn.disabled = false;
+                triggerBtn.innerHTML = originalBtnText;
+                showToast('Conditions not met for fine-tuning', 'warning');
+            }
         } else {
-            showToast('Conditions not met for fine-tuning', 'warning');
+            statusMessageDiv.style.display = 'none';
+            triggerBtn.disabled = false;
+            triggerBtn.innerHTML = originalBtnText;
+            showToast('Unexpected response from server', 'error');
         }
     } catch (error) {
+        if (window.jobPollInterval) {
+            clearInterval(window.jobPollInterval);
+            window.jobPollInterval = null;
+        }
+        statusMessageDiv.style.display = 'none';
+        triggerBtn.disabled = false;
+        triggerBtn.innerHTML = originalBtnText;
         showToast('Failed to trigger fine-tuning: ' + error.message, 'error');
     }
 }
@@ -810,22 +940,60 @@ async function refreshJobs() {
             return;
         }
         
-        const html = jobs.map(job => {
+            const html = jobs.map(job => {
             const status = job.status || 'unknown';
             const jobId = job.job_id || 'N/A';
             const createdAt = job.created_at || job.created_at_timestamp || new Date().toISOString();
             const datasetId = job.dataset_id || job.config?.dataset_id || '';
+            // Get model version from config (set during training), not from version_id
+            const modelVersion = job.config?.model_version || '';
+            const isCurrent = job.config?.is_current || false;
+            
+            // Map status to display status
+            let displayStatus = status;
+            let statusBadgeClass = 'badge-secondary';
+            if (status === 'completed') {
+                displayStatus = 'Completed';
+                statusBadgeClass = 'badge-success';
+            } else if (status === 'failed') {
+                displayStatus = 'Failed';
+                statusBadgeClass = 'badge-danger';
+            } else if (status === 'training' || status === 'evaluating') {
+                displayStatus = 'Running';
+                statusBadgeClass = 'badge-info';
+            } else if (status === 'preparing' || status === 'ready') {
+                displayStatus = 'Preparing';
+                statusBadgeClass = 'badge-warning';
+            } else if (status === 'pending') {
+                displayStatus = 'Started';
+                statusBadgeClass = 'badge-info';
+            } else {
+                displayStatus = status.charAt(0).toUpperCase() + status.slice(1);
+            }
+            
+            // Build model info for completed jobs
+            let modelInfoHtml = '';
+            if (status === 'completed' && modelVersion) {
+                modelInfoHtml = `
+                    <div class="case-meta" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e0e0e0;">
+                        <span><i class="fas fa-cube"></i> Model: <strong>${modelVersion}</strong></span>
+                        ${isCurrent ? `<span class="badge badge-success" style="margin-left: 8px;"><i class="fas fa-check-circle"></i> Current Model</span>` : ''}
+                    </div>
+                `;
+            }
             
             return `
                 <div class="case-item">
                     <div class="case-header">
                         <span class="case-id">${jobId}</span>
-                        <span class="badge ${status === 'completed' ? 'badge-success' : status === 'running' || status === 'in_progress' ? 'badge-info' : status === 'queued' ? 'badge-warning' : 'badge-secondary'}">${status}</span>
+                        <span class="badge ${statusBadgeClass}">${displayStatus}</span>
                     </div>
                     <div class="case-meta">
                         <span><i class="fas fa-clock"></i> ${new Date(createdAt).toLocaleString()}</span>
                         ${datasetId ? `<span><i class="fas fa-database"></i> ${datasetId}</span>` : ''}
+                        ${job.trigger_reason ? `<span><i class="fas fa-info-circle"></i> ${job.trigger_reason}</span>` : ''}
                     </div>
+                    ${modelInfoHtml}
                 </div>
             `;
         }).join('');
@@ -876,20 +1044,31 @@ async function refreshModelVersions() {
     
     const html = versions.map(version => {
         const isCurrent = version.is_current !== undefined ? version.is_current : (version.status === 'current');
-        const params = version.parameters ? `${(version.parameters / 1000000).toFixed(0)}M` : (version.params || 'N/A');
+        const isBaseline = version.version_id === 'wav2vec2-base' || version.model_id === 'wav2vec2-base';
+        // Display WER/CER instead of parameters
+        const wer = version.wer !== null && version.wer !== undefined ? `${(version.wer * 100).toFixed(1)}%` : 'N/A';
+        const cer = version.cer !== null && version.cer !== undefined ? `${(version.cer * 100).toFixed(1)}%` : 'N/A';
+        const metrics = version.is_finetuned !== false ? `WER: ${wer} / CER: ${cer}` : 'N/A';
         const createdDate = version.created_at ? new Date(version.created_at).toLocaleString() : 'N/A';
+        
+        // Determine badge text and class - only show badges for baseline and current models
+        let badgeHtml = '';
+        if (isBaseline) {
+            badgeHtml = `<span class="badge badge-secondary">Baseline</span>`;
+        } else if (isCurrent) {
+            badgeHtml = `<span class="badge badge-success">Current</span>`;
+        }
+        // No badge for intermediate models (neither baseline nor current)
         
         return `
         <div class="case-item">
             <div class="case-header">
                 <span class="case-id">${version.version_id}</span>
-                <span class="badge ${isCurrent ? 'badge-success' : 'badge-secondary'}">
-                    ${isCurrent ? 'Current' : 'Baseline'}
-                </span>
+                ${badgeHtml}
             </div>
             <div class="case-meta">
                 <span><i class="fas fa-cube"></i> ${version.model_name || version.version_id}</span>
-                <span><i class="fas fa-microchip"></i> Params: ${params}</span>
+                <span><i class="fas fa-chart-line"></i> ${metrics}</span>
                 <span><i class="fas fa-clock"></i> ${createdDate}</span>
             </div>
         </div>

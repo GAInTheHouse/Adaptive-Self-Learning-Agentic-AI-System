@@ -90,7 +90,7 @@ class LlamaLLMCorrector:
             corrected_text = self._generate_correction(prompt)
             inference_time = time.time() - start_time
             
-            logger.info(f"LLM inference time: {inference_time:.2f}s")
+            # logger.info(f"LLM inference time: {inference_time:.2f}s")
             
             # If LLM returned the same text (case-insensitive), it means transcript was already correct
             # Normalize for comparison (lowercase, strip whitespace)

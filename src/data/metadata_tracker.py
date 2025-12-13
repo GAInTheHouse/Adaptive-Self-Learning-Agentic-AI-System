@@ -125,36 +125,76 @@ class MetadataTracker:
     def _load_local_data(self):
         """Load existing metadata from local storage."""
         # Load performance history
-        if self.performance_file.exists():
-            with open(self.performance_file, 'r') as f:
-                for line in f:
-                    if line.strip():
-                        self.performance_history.append(
-                            PerformanceMetrics.from_dict(json.loads(line))
-                        )
-            logger.info(f"Loaded {len(self.performance_history)} performance records")
+        if self.performance_file.exists() and self.performance_file.stat().st_size > 0:
+            try:
+                with open(self.performance_file, 'r') as f:
+                    for line in f:
+                        if line.strip():
+                            try:
+                                self.performance_history.append(
+                                    PerformanceMetrics.from_dict(json.loads(line))
+                                )
+                            except (json.JSONDecodeError, ValueError) as e:
+                                logger.warning(f"Invalid JSON line in performance file: {e}")
+                                continue
+                logger.info(f"Loaded {len(self.performance_history)} performance records")
+            except Exception as e:
+                logger.warning(f"Error loading performance history: {e}")
+                self.performance_history = []
         
         # Load model versions
-        if self.model_versions_file.exists():
-            with open(self.model_versions_file, 'r') as f:
-                self.model_versions = json.load(f)
-            logger.info(f"Loaded {len(self.model_versions)} model versions")
+        if self.model_versions_file.exists() and self.model_versions_file.stat().st_size > 0:
+            try:
+                with open(self.model_versions_file, 'r') as f:
+                    content = f.read().strip()
+                    if content:
+                        self.model_versions = json.loads(content)
+                        logger.info(f"Loaded {len(self.model_versions)} model versions")
+                    else:
+                        logger.warning(f"Model versions file {self.model_versions_file} is empty, initializing empty dict")
+                        self.model_versions = {}
+            except json.JSONDecodeError as e:
+                logger.warning(f"Invalid JSON in model versions file {self.model_versions_file}: {e}, initializing empty dict")
+                self.model_versions = {}
+            except Exception as e:
+                logger.warning(f"Error loading model versions from {self.model_versions_file}: {e}, initializing empty dict")
+                self.model_versions = {}
+        else:
+            if self.model_versions_file.exists():
+                logger.info(f"Model versions file {self.model_versions_file} exists but is empty, initializing empty dict")
+            self.model_versions = {}
         
         # Load learning progress
-        if self.learning_progress_file.exists():
-            with open(self.learning_progress_file, 'r') as f:
-                for line in f:
-                    if line.strip():
-                        self.learning_progress.append(json.loads(line))
-            logger.info(f"Loaded {len(self.learning_progress)} learning progress records")
+        if self.learning_progress_file.exists() and self.learning_progress_file.stat().st_size > 0:
+            try:
+                with open(self.learning_progress_file, 'r') as f:
+                    for line in f:
+                        if line.strip():
+                            try:
+                                self.learning_progress.append(json.loads(line))
+                            except json.JSONDecodeError as e:
+                                logger.warning(f"Invalid JSON line in learning progress file: {e}")
+                                continue
+                logger.info(f"Loaded {len(self.learning_progress)} learning progress records")
+            except Exception as e:
+                logger.warning(f"Error loading learning progress: {e}")
+                self.learning_progress = []
         
         # Load inference stats
-        if self.inference_stats_file.exists():
-            with open(self.inference_stats_file, 'r') as f:
-                for line in f:
-                    if line.strip():
-                        self.inference_stats.append(json.loads(line))
-            logger.info(f"Loaded {len(self.inference_stats)} inference stats records")
+        if self.inference_stats_file.exists() and self.inference_stats_file.stat().st_size > 0:
+            try:
+                with open(self.inference_stats_file, 'r') as f:
+                    for line in f:
+                        if line.strip():
+                            try:
+                                self.inference_stats.append(json.loads(line))
+                            except json.JSONDecodeError as e:
+                                logger.warning(f"Invalid JSON line in inference stats file: {e}")
+                                continue
+                logger.info(f"Loaded {len(self.inference_stats)} inference stats records")
+            except Exception as e:
+                logger.warning(f"Error loading inference stats: {e}")
+                self.inference_stats = []
     
     def record_performance(
         self,

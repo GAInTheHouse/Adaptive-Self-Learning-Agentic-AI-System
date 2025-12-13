@@ -176,19 +176,38 @@ class FinetuningOrchestrator:
     
     def _load_jobs(self):
         """Load job history."""
+        # Clear existing jobs before reloading to avoid stale data
+        self.jobs = {}
         if self.jobs_file.exists():
-            with open(self.jobs_file, 'r') as f:
-                for line in f:
-                    if line.strip():
-                        job_data = json.loads(line)
-                        job = FinetuningJob(**job_data)
-                        self.jobs[job.job_id] = job
-            logger.info(f"Loaded {len(self.jobs)} job records")
+            try:
+                with open(self.jobs_file, 'r') as f:
+                    for line in f:
+                        if line.strip():
+                            try:
+                                job_data = json.loads(line)
+                                job = FinetuningJob(**job_data)
+                                self.jobs[job.job_id] = job
+                            except json.JSONDecodeError as e:
+                                logger.warning(f"Failed to parse job line: {e}, line: {line[:100]}")
+                                continue
+                            except Exception as e:
+                                logger.warning(f"Failed to create job from line: {e}")
+                                continue
+                logger.info(f"Loaded {len(self.jobs)} job records from {self.jobs_file}")
+            except Exception as e:
+                logger.error(f"Error loading jobs from {self.jobs_file}: {e}")
+                self.jobs = {}
     
     def _save_job(self, job: FinetuningJob):
-        """Save job to persistent storage."""
-        with open(self.jobs_file, 'a') as f:
-            f.write(json.dumps(job.to_dict()) + '\n')
+        """Save job to persistent storage. Updates the entire file to ensure consistency."""
+        # First, update the in-memory job to ensure consistency
+        self.jobs[job.job_id] = job
+        
+        # Rewrite the entire file to ensure latest status is reflected
+        # This is less efficient for many jobs but ensures consistency
+        with open(self.jobs_file, 'w') as f:
+            for existing_job in self.jobs.values():
+                f.write(json.dumps(existing_job.to_dict()) + '\n')
         
         # Sync to GCS if enabled
         if self.use_gcs and self.gcs_manager:
@@ -300,7 +319,8 @@ class FinetuningOrchestrator:
         try:
             logger.info(f"Preparing dataset for job {job_id}...")
             job.status = 'preparing'
-            self._save_job(job)
+            self._save_job(job)  # Save immediately so UI can see status change
+            logger.info(f"📝 Job {job_id} status updated to 'preparing' and saved")
             
             # Prepare dataset using pipeline
             dataset_info = self.dataset_pipeline.prepare_dataset(
@@ -340,8 +360,8 @@ class FinetuningOrchestrator:
             
             job.version_id = version_id
             job.status = 'ready'
-            self._save_job(job)
-            
+            self._save_job(job)  # Save immediately so UI can see status change
+            logger.info(f"📝 Job {job_id} status updated to 'ready' and saved")
             logger.info(f"✅ Dataset prepared: {dataset_id} (version: {version_id})")
             return True
             
@@ -430,7 +450,8 @@ class FinetuningOrchestrator:
         
         logger.info(f"🚀 Fine-tuning triggered! Job ID: {job.job_id}")
         
-        return job
+        # Return the updated job from self.jobs (status may have changed during prepare_dataset_for_job)
+        return self.jobs.get(job.job_id, job)
     
     def start_training(self, job_id: str, training_params: Optional[Dict] = None) -> bool:
         """
@@ -455,7 +476,8 @@ class FinetuningOrchestrator:
         try:
             job.status = 'training'
             job.started_at = datetime.now().isoformat()
-            self._save_job(job)
+            self._save_job(job)  # Save immediately so UI can see it
+            logger.info(f"📝 Job {job_id} status set to 'training' and saved to file")
             
             logger.info(f"Starting training for job {job_id}...")
             
@@ -463,12 +485,26 @@ class FinetuningOrchestrator:
             if self.training_callback:
                 logger.info("Using custom training callback")
                 result = self.training_callback(job, training_params)
-                if result:
-                    job.status = 'completed'
-                    job.completed_at = datetime.now().isoformat()
-                else:
-                    job.status = 'failed'
-                    job.error_message = "Training callback returned failure"
+                # Only update status if callback didn't handle it (status not set to 'completed' or 'evaluating')
+                # This allows the callback to manage its own status (e.g., for evaluation phase)
+                # Get the current status from the jobs dict (callback may have updated it)
+                orchestrator_job = self.jobs.get(job_id, job)
+                current_status = orchestrator_job.status
+                
+                if result and current_status not in ['completed', 'evaluating']:
+                    # Callback returned success but didn't set status, assume completed
+                    orchestrator_job.status = 'completed'
+                    orchestrator_job.completed_at = datetime.now().isoformat()
+                    self.jobs[job_id] = orchestrator_job
+                elif not result and current_status not in ['failed', 'evaluating']:
+                    # Callback returned failure and didn't set status, mark as failed
+                    orchestrator_job.status = 'failed'
+                    orchestrator_job.error_message = "Training callback returned failure"
+                    self.jobs[job_id] = orchestrator_job
+                # If status is 'evaluating', leave it as-is (callback will handle completion later)
+                
+                # Update job parameter reference for consistency
+                job.status = orchestrator_job.status
             else:
                 # Default: Mark as ready for external training
                 logger.info("⚠️  No training callback configured")
@@ -510,6 +546,34 @@ class FinetuningOrchestrator:
         try:
             job.status = 'completed'
             job.completed_at = datetime.now().isoformat()
+            
+            # Preserve existing config if it exists (e.g., model_version, is_current from training callback)
+            # DO NOT overwrite config values that were set by the training callback
+            if job.config is None:
+                job.config = {}
+            
+            # Store model path in config if not already set (don't overwrite if already set)
+            if 'model_path' not in job.config:
+                job.config['model_path'] = model_path
+            
+            # CRITICAL: Update in-memory jobs dict before saving
+            self.jobs[job_id] = job
+            
+            # If model_version is not set, try to extract it from model_path
+            if 'model_version' not in job.config and model_path:
+                try:
+                    from pathlib import Path
+                    model_path_obj = Path(model_path)
+                    model_dir_name = model_path_obj.name  # e.g., "finetuned_wav2vec2_v10"
+                    import re
+                    version_match = re.match(r'finetuned_wav2vec2_v(\d+)', model_dir_name)
+                    if version_match:
+                        version_num = version_match.group(1)
+                        job.config['model_version'] = f"finetuned_wav2vec2_v{version_num}"
+                        logger.info(f"Extracted model_version from path: {job.config['model_version']}")
+                except Exception as e:
+                    logger.warning(f"Could not extract model version from path {model_path}: {e}")
+            
             self._save_job(job)
             
             # Record model version in metadata tracker
@@ -550,6 +614,14 @@ class FinetuningOrchestrator:
             
             logger.info(f"✅ Training completed for job {job_id}")
             logger.info(f"   Model: {model_path}")
+            
+            # Clear error cases after successful fine-tuning
+            # This resets the error case count to zero
+            try:
+                self.data_manager.clear_failed_cases()
+                logger.info("✅ Cleared all error cases after fine-tuning completion")
+            except Exception as e:
+                logger.warning(f"Failed to clear error cases after training: {e}")
             
             return True
             
