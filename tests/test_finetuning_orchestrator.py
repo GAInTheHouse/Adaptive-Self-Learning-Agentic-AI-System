@@ -163,6 +163,8 @@ class TestFinetuningOrchestrator:
             'is_valid': True,
             'issues': []
         }
+        # Mock output_dir as a Path object to support path operations
+        mock_pipeline_instance.output_dir = Path("/tmp/test_output")
         orchestrator.dataset_pipeline = mock_pipeline_instance
         
         # Mock version control
@@ -202,6 +204,8 @@ class TestFinetuningOrchestrator:
             'is_valid': True,
             'issues': []
         }
+        # Mock output_dir as a Path object to support path operations
+        mock_pipeline_instance.output_dir = Path("/tmp/test_output")
         orchestrator.dataset_pipeline = mock_pipeline_instance
         
         # Mock version control
