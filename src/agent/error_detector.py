@@ -109,9 +109,9 @@ class ErrorDetector:
         
         # 3. Length anomaly detection (based on audio length)
         if audio_length_seconds:
-            expected_length = audio_length_seconds * 2.5  # ~2.5 chars per second average
+            expected_length = max(1, audio_length_seconds * 2.5)  # ~2.5 chars per second average, minimum 1
             actual_length = len(transcript)
-            ratio = actual_length / expected_length if expected_length > 0 else 1.0
+            ratio = actual_length / expected_length
             
             if ratio > self.max_length_ratio:
                 errors.append(ErrorSignal(

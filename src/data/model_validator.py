@@ -54,7 +54,22 @@ class ValidationResult:
         result = asdict(self)
         if self.per_sample_results is None:
             result['per_sample_results'] = []
-        return result
+        
+        # Convert numpy types to native Python types for JSON serialization
+        def convert_numpy_types(obj):
+            if isinstance(obj, np.integer):
+                return int(obj)
+            elif isinstance(obj, np.floating):
+                return float(obj)
+            elif isinstance(obj, np.bool_):
+                return bool(obj)
+            elif isinstance(obj, dict):
+                return {k: convert_numpy_types(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_numpy_types(item) for item in obj]
+            return obj
+        
+        return convert_numpy_types(result)
 
 
 @dataclass
@@ -372,9 +387,9 @@ class ModelValidator:
             t_stat, p_value = stats.ttest_1samp(improvements, 0)
             
             # One-tailed test (we care if model is better, not just different)
-            p_value = p_value / 2 if t_stat > 0 else 1.0
+            p_value = float(p_value / 2 if t_stat > 0 else 1.0)
             
-            is_significant = p_value < self.config.significance_alpha
+            is_significant = bool(p_value < self.config.significance_alpha)
             
             return is_significant, p_value
             

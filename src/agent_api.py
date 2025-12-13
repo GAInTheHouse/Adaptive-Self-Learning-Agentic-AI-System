@@ -5,14 +5,12 @@ FastAPI endpoints for agent-integrated STT with error detection and self-learnin
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from pydantic import BaseModel
-import tempfile
-import os
-import librosa
 from typing import Optional
-import time
 
 from src.baseline_model import BaselineSTTModel
 from src.agent import STTAgent
+from src.utils.api_helpers import handle_audio_upload, transcribe_with_timing, transcribe_agent_with_timing
+from src.utils.file_utils import cleanup_temp_file
 
 app = FastAPI(title="STT Agent API", version="2.0.0")
 
@@ -64,25 +62,24 @@ async def transcribe(file: UploadFile = File(...)):
         curl -X POST "http://localhost:8000/transcribe" \\
           -F "file=@audio.wav"
     """
+    tmp_path = None
     try:
         # Save uploaded file temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-            content = await file.read()
-            tmp.write(content)
-            tmp_path = tmp.name
+        tmp_path = await handle_audio_upload(file)
         
-        # Transcribe
-        start = time.time()
-        result = baseline_model.transcribe(tmp_path)
-        result["inference_time_seconds"] = time.time() - start
-        
-        # Cleanup
-        os.remove(tmp_path)
+        # Transcribe with timing
+        result = transcribe_with_timing(baseline_model, tmp_path)
         
         return result
     
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Cleanup
+        if tmp_path:
+            cleanup_temp_file(tmp_path)
 
 
 @app.post("/agent/transcribe")
@@ -101,34 +98,28 @@ async def agent_transcribe(
         curl -X POST "http://localhost:8000/agent/transcribe?auto_correction=true" \\
           -F "file=@audio.wav"
     """
+    tmp_path = None
     try:
         # Save uploaded file temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-            content = await file.read()
-            tmp.write(content)
-            tmp_path = tmp.name
+        tmp_path = await handle_audio_upload(file)
         
-        # Get audio length for error detection
-        try:
-            audio, sr = librosa.load(tmp_path, sr=16000)
-            audio_length = len(audio) / sr
-        except:
-            audio_length = None
-        
-        # Transcribe with agent
-        result = agent.transcribe_with_agent(
-            audio_path=tmp_path,
-            audio_length_seconds=audio_length,
+        # Transcribe with agent (includes audio length calculation)
+        result = transcribe_agent_with_timing(
+            agent,
+            tmp_path,
             enable_auto_correction=auto_correction
         )
         
-        # Cleanup
-        os.remove(tmp_path)
-        
         return result
     
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Cleanup
+        if tmp_path:
+            cleanup_temp_file(tmp_path)
 
 
 @app.post("/agent/feedback")
