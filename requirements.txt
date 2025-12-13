@@ -5,7 +5,8 @@ torchaudio>=2.0.0
 transformers>=4.35.0
 accelerate>=0.24.0
 datasets>=2.14.0
-bitsandbytes>=0.41.0  # For quantization (optional, helps with memory)
+bitsandbytes>=0.43.0  # For quantization (4-bit and 8-bit support)
+peft>=0.8.0  # For LoRA fine-tuning
 
 # Audio processing
 librosa>=0.10.0
@@ -37,6 +38,9 @@ wandb>=0.16.0
 tqdm>=4.65.0
 pyyaml>=6.0
 python-dotenv>=1.0.0
+
+# Ollama for LLM inference (Llama 2/3)
+ollama>=0.1.0
 
 # Development
 pytest>=7.4.0

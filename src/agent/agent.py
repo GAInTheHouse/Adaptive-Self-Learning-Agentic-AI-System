@@ -12,7 +12,7 @@ import numpy as np
 
 from .error_detector import ErrorDetector, ErrorSignal
 from .self_learner import SelfLearner
-from .llm_corrector import GemmaLLMCorrector
+from .llm_corrector import LlamaLLMCorrector
 from .adaptive_scheduler import AdaptiveScheduler
 from .fine_tuner import FineTuner
 
@@ -32,7 +32,7 @@ class STTAgent:
         error_threshold: float = 0.3,
         use_llm_correction: bool = True,
         llm_model_name: Optional[str] = None,
-        use_quantization: bool = False,
+        use_quantization: bool = False,  # Not used for Ollama, kept for compatibility
         enable_adaptive_fine_tuning: bool = True,
         scheduler_history_path: Optional[str] = None
     ):
@@ -42,9 +42,9 @@ class STTAgent:
         Args:
             baseline_model: Instance of BaselineSTTModel
             error_threshold: Threshold for error detection confidence
-            use_llm_correction: Whether to use Gemma LLM for intelligent correction
-            llm_model_name: Gemma model name (default: "google/gemma-2b-it")
-            use_quantization: Whether to use 8-bit quantization for LLM (saves memory)
+            use_llm_correction: Whether to use Ollama LLM for intelligent correction
+            llm_model_name: Ollama model name (default: "llama3.2:3b")
+            use_quantization: Not used for Ollama (kept for compatibility)
             enable_adaptive_fine_tuning: Whether to enable adaptive fine-tuning (Week 3)
             scheduler_history_path: Path to save/load scheduler history
         """
@@ -52,22 +52,23 @@ class STTAgent:
         self.error_detector = ErrorDetector(min_confidence_threshold=error_threshold)
         self.self_learner = SelfLearner()  # In-memory tracking only
         
-        # Initialize Gemma LLM corrector if requested
+        # Initialize LLM corrector if requested
         self.llm_corrector = None
         if use_llm_correction:
             try:
-                self.llm_corrector = GemmaLLMCorrector(
-                    model_name=llm_model_name or "google/gemma-2b-it",
-                    use_quantization=use_quantization
+                self.llm_corrector = LlamaLLMCorrector(
+                    model_name=llm_model_name or "llama3.2:3b",
+                    use_quantization=False,  # Not used for Ollama
+                    fast_mode=True  # Kept for compatibility
                 )
                 if self.llm_corrector.is_available():
-                    logger.info("✅ Gemma LLM corrector initialized successfully")
+                    logger.info("✅ LLM corrector initialized successfully")
                 else:
-                    logger.warning("⚠️  Gemma LLM not available, using rule-based correction only")
+                    logger.warning("⚠️  LLM not available, using rule-based correction only")
                     self.llm_corrector = None
             except Exception as e:
-                logger.warning(f"⚠️  Failed to initialize Gemma LLM: {e}. Using rule-based correction only.")
-                self.llm_corrector = None
+                logger.error(f"❌ Failed to initialize LLM: {e}")
+                raise  # Fail and alert if Ollama is not available
         
         # Initialize adaptive scheduler and fine-tuner (Week 3)
         self.enable_adaptive_fine_tuning = enable_adaptive_fine_tuning
@@ -120,6 +121,7 @@ class STTAgent:
         inference_time = time.time() - start_time
         
         transcript = baseline_result.get('transcript', '')
+        baseline_result.setdefault("original_transcript", transcript)
         
         # Step 2: Detect errors
         errors = self.error_detector.detect_errors(
@@ -167,10 +169,10 @@ class STTAgent:
                             'error_type': 'llm_correction',
                             'original': transcript,
                             'corrected': corrected_transcript,
-                            'method': 'gemma_llm',
+                            'method': 'llama_llm',
                             'confidence': 0.8  # LLM corrections have high confidence
                         })
-                        logger.info("✅ Applied LLM-based correction using Gemma")
+                        logger.info("✅ Applied LLM-based correction using Llama")
                     else:
                         # Fall back to rule-based correction
                         corrected_transcript, corrections_applied = self._apply_corrections(
@@ -192,7 +194,7 @@ class STTAgent:
             
             # Record corrections for learning
             for error in errors:
-                if error.suggested_correction or correction_method.startswith("gemma"):
+                if error.suggested_correction or correction_method.startswith("llama"):
                     self.self_learner.record_error(
                         error_type=error.error_type,
                         transcript=transcript,
@@ -201,7 +203,7 @@ class STTAgent:
                             'confidence': baseline_result.get('confidence'),
                             'correction_method': correction_method
                         },
-                        correction=corrected_transcript if correction_method.startswith("gemma") else error.suggested_correction
+                        correction=corrected_transcript if correction_method.startswith("llama") else error.suggested_correction
                     )
         
         # Step 5: Record errors for learning (even if not corrected)
@@ -403,8 +405,10 @@ class STTAgent:
                         'error_type': error_type
                     })
         
-        if len(error_samples) < 10:
-            logger.warning(f"Insufficient error samples ({len(error_samples)}), skipping fine-tuning")
+        from src.constants import RECOMMENDED_SAMPLES_FOR_FINETUNING
+        
+        if len(error_samples) < RECOMMENDED_SAMPLES_FOR_FINETUNING:
+            logger.warning(f"Insufficient error samples ({len(error_samples)}), skipping fine-tuning (recommended: {RECOMMENDED_SAMPLES_FOR_FINETUNING}+)")
             return False
         
         # Get current model performance for comparison
