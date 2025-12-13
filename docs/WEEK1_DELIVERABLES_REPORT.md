@@ -48,13 +48,13 @@ Week 1 deliverables include a comprehensive evaluation framework for STT baselin
 - Standalone benchmark execution script
 
 ### 5. **GCP Integration**
-**Location**: `scripts/setup_gcp_gpu.sh`
+**Location**: `scripts/gcp_scripts/setup_gcp_gpu.sh`
 - GPU VM creation script
 
-**Location**: `scripts/deploy_to_gcp.py`
+**Location**: `scripts/gcp_scripts/deploy_to_gcp.py`
 - Code deployment to GCP VM
 
-**Location**: `scripts/monitor_gcp_costs.py`
+**Location**: `scripts/gcp_scripts/monitor_gcp_costs.py`
 - Cost monitoring and usage tracking
 
 **Location**: `src/utils/gcs_utils.py`
@@ -235,10 +235,9 @@ scripts/
 ## 📚 Documentation
 
 ### Setup & Usage Guides
-- **`docs/GCP_SETUP_GUIDE.md`** - Complete GCP GPU setup guide
-- **`README_GCP.md`** - Quick GCP reference
+- **`docs/GCP_GUIDE.md`** - Complete GCP setup, deployment, and cost optimization guide
 - **`SETUP_INSTRUCTIONS.md`** - Step-by-step setup instructions
-- **`scripts/INSTALL_GCLOUD.md`** - gcloud CLI installation guide
+- **`TESTING_GUIDE.md`** - Comprehensive testing guide
 
 ### Code Documentation
 - All scripts include docstrings
