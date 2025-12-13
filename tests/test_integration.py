@@ -15,14 +15,31 @@ import tempfile
 import shutil
 
 
+def check_ollama_available():
+    """Check if Ollama is available for testing."""
+    try:
+        import ollama
+        # Try to connect to Ollama server
+        ollama.list()
+        return True
+    except (ImportError, Exception):
+        return False
+
+
 class TestCompleteWorkflow:
     """Test complete workflow integration"""
     
     def setup_method(self):
-        """Setup test components"""
+        """Setup test components - requires Ollama"""
+        if not check_ollama_available():
+            pytest.skip("Ollama not available - install with: pip install ollama and start server: ollama serve")
+        
         self.test_dir = tempfile.mkdtemp()
         self.baseline_model = BaselineSTTModel(model_name="whisper")
-        self.agent = STTAgent(baseline_model=self.baseline_model)
+        try:
+            self.agent = STTAgent(baseline_model=self.baseline_model)
+        except (ImportError, RuntimeError) as e:
+            pytest.skip(f"Ollama not available: {e}")
         self.data_system = IntegratedDataManagementSystem(
             base_dir=self.test_dir,
             use_gcs=False
@@ -30,7 +47,7 @@ class TestCompleteWorkflow:
     
     def teardown_method(self):
         """Cleanup test directory"""
-        if Path(self.test_dir).exists():
+        if hasattr(self, 'test_dir') and Path(self.test_dir).exists():
             shutil.rmtree(self.test_dir)
     
     @pytest.mark.skipif(not Path("data/test_audio/test_1.wav").exists(), 
@@ -186,10 +203,16 @@ class TestAgentDataIntegration:
     """Test integration between agent and data management"""
     
     def setup_method(self):
-        """Setup test components"""
+        """Setup test components - requires Ollama"""
+        if not check_ollama_available():
+            pytest.skip("Ollama not available - install with: pip install ollama and start server: ollama serve")
+        
         self.test_dir = tempfile.mkdtemp()
         self.baseline_model = BaselineSTTModel(model_name="whisper")
-        self.agent = STTAgent(baseline_model=self.baseline_model)
+        try:
+            self.agent = STTAgent(baseline_model=self.baseline_model)
+        except (ImportError, RuntimeError) as e:
+            pytest.skip(f"Ollama not available: {e}")
         self.data_system = IntegratedDataManagementSystem(
             base_dir=self.test_dir,
             use_gcs=False
@@ -197,7 +220,7 @@ class TestAgentDataIntegration:
     
     def teardown_method(self):
         """Cleanup"""
-        if Path(self.test_dir).exists():
+        if hasattr(self, 'test_dir') and Path(self.test_dir).exists():
             shutil.rmtree(self.test_dir)
     
     def test_agent_stats_and_data_stats_consistency(self):
