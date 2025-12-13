@@ -26,7 +26,8 @@ class LlamaLLMCorrector:
         ollama_base_url: str = "http://localhost:11434",
         device: Optional[str] = None,
         use_quantization: bool = False,  # Not used for Ollama, kept for compatibility
-        fast_mode: bool = True  # Not used for Ollama, kept for compatibility
+        fast_mode: bool = True,  # Not used for Ollama, kept for compatibility
+        raise_on_error: bool = False  # If False, mark as unavailable instead of raising
     ):
         """
         Initialize Ollama LLM corrector.
@@ -37,6 +38,7 @@ class LlamaLLMCorrector:
             device: Not used for Ollama (kept for compatibility)
             use_quantization: Not used for Ollama (kept for compatibility)
             fast_mode: Not used for Ollama (kept for compatibility)
+            raise_on_error: If True, raise exceptions on initialization failure. If False, mark as unavailable.
         """
         self.model_name = model_name
         self.ollama_base_url = ollama_base_url
@@ -49,12 +51,20 @@ class LlamaLLMCorrector:
         try:
             self.ollama = OllamaLLM(
                 model_name=model_name,
-                base_url=ollama_base_url
+                base_url=ollama_base_url,
+                raise_on_error=raise_on_error
             )
-            logger.info(f"✅ Ollama LLM corrector initialized successfully with model: {model_name}")
+            if self.ollama.is_available():
+                logger.info(f"✅ Ollama LLM corrector initialized successfully with model: {model_name}")
+            else:
+                logger.warning(f"⚠️  Ollama LLM corrector initialized but unavailable (server not running or model not found)")
         except Exception as e:
-            logger.error(f"Failed to initialize Ollama LLM: {e}")
-            raise  # Fail and alert if Ollama is not available
+            if raise_on_error:
+                logger.error(f"Failed to initialize Ollama LLM: {e}")
+                raise  # Fail and alert if Ollama is not available and raise_on_error=True
+            else:
+                logger.warning(f"Failed to initialize Ollama LLM: {e}. LLM correction will be unavailable.")
+                self.ollama = None
     
     def correct_transcript(
         self,
@@ -267,7 +277,7 @@ Improved transcript:"""
     
     def is_available(self) -> bool:
         """Check if Ollama LLM is available."""
-        return self.ollama is not None and self.ollama.is_available()
+        return self.ollama is not None and hasattr(self.ollama, 'is_available') and self.ollama.is_available()
     
     def get_model_info(self) -> Dict:
         """Get information about the loaded model."""

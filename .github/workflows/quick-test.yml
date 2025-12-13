@@ -22,17 +22,32 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        key: ${{ runner.os }}-pip-quick-${{ hashFiles('**/requirements-ci.txt') }}
         restore-keys: |
-          ${{ runner.os }}-pip-
+          ${{ runner.os }}-pip-quick-
+    
+    - name: Free up disk space
+      run: |
+        # Remove unnecessary packages and clean up
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        df -h
     
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest pytest-cov
-        # Install only essential dependencies for quick tests
-        pip install torch --index-url https://download.pytorch.org/whl/cpu
-        pip install transformers jiwer librosa soundfile
+        pip install --no-cache-dir pytest pytest-cov
+        # Install only essential dependencies for quick tests with CPU-only PyTorch
+        pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+        pip install --no-cache-dir transformers jiwer librosa soundfile
+    
+    - name: Clean up pip cache
+      run: |
+        pip cache purge || true
+        df -h
     
     - name: Run quick unit tests
       run: |

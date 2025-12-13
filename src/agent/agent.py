@@ -59,16 +59,17 @@ class STTAgent:
                 self.llm_corrector = LlamaLLMCorrector(
                     model_name=llm_model_name or "llama3.2:3b",
                     use_quantization=False,  # Not used for Ollama
-                    fast_mode=True  # Kept for compatibility
+                    fast_mode=True,  # Kept for compatibility
+                    raise_on_error=False  # Don't raise, just mark as unavailable
                 )
                 if self.llm_corrector.is_available():
                     logger.info("✅ LLM corrector initialized successfully")
                 else:
                     logger.warning("⚠️  LLM not available, using rule-based correction only")
-                    self.llm_corrector = None
+                    # Keep llm_corrector object but it will be unavailable
             except Exception as e:
-                logger.error(f"❌ Failed to initialize LLM: {e}")
-                raise  # Fail and alert if Ollama is not available
+                logger.warning(f"⚠️  Failed to initialize LLM: {e}. Continuing without LLM correction.")
+                self.llm_corrector = None
         
         # Initialize adaptive scheduler and fine-tuner (Week 3)
         self.enable_adaptive_fine_tuning = enable_adaptive_fine_tuning
@@ -194,31 +195,30 @@ class STTAgent:
             
             # Record corrections for learning
             for error in errors:
-                if error.suggested_correction or correction_method.startswith("llama"):
-                    self.self_learner.record_error(
-                        error_type=error.error_type,
-                        transcript=transcript,
-                        context={
-                            'audio_length': audio_length_seconds,
-                            'confidence': baseline_result.get('confidence'),
-                            'correction_method': correction_method
-                        },
-                        correction=corrected_transcript if correction_method.startswith("llama") else error.suggested_correction
-                    )
-        
-        # Step 5: Record errors for learning (even if not corrected)
-        error_count = len(errors)
-        for error in errors:
-            self.self_learner.record_error(
-                error_type=error.error_type,
-                transcript=transcript,
-                context={
+                # Build comprehensive context
+                context = {
                     'audio_path': audio_path,  # Store path for fine-tuning
                     'audio_length': audio_length_seconds,
                     'confidence': baseline_result.get('confidence'),
                     'error_confidence': error.confidence
                 }
-            )
+                
+                # Add correction info if available
+                correction = None
+                if error.suggested_correction or correction_method.startswith("llama"):
+                    context['correction_method'] = correction_method
+                    correction = corrected_transcript if correction_method.startswith("llama") else error.suggested_correction
+                
+                # Record error with all context (single recording per error)
+                self.self_learner.record_error(
+                    error_type=error.error_type,
+                    transcript=transcript,
+                    context=context,
+                    correction=correction
+                )
+        
+        # Step 5: Calculate error count for metrics
+        error_count = len(errors)
         
         # Step 6: Update adaptive scheduler and check for fine-tuning trigger (Week 3)
         fine_tuning_triggered = False
@@ -264,7 +264,7 @@ class STTAgent:
                 'error_threshold': self.error_detector.min_confidence_threshold,
                 'auto_correction_enabled': enable_auto_correction,
                 'correction_method': correction_method,
-                'llm_available': self.llm_corrector.is_available() if self.llm_corrector else False,
+                'llm_available': self.llm_corrector.is_available() if (self.llm_corrector and hasattr(self.llm_corrector, 'is_available')) else False,
                 'adaptive_fine_tuning_enabled': self.enable_adaptive_fine_tuning,
                 'fine_tuning_triggered': fine_tuning_triggered
             }

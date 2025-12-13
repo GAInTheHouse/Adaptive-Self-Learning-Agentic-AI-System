@@ -178,18 +178,29 @@ class BaselineSTTModel:
             inputs = self.processor(audio, sampling_rate=sr, return_tensors="pt")
             with torch.no_grad():
                 input_features = inputs["input_features"].to(self.device)
+                
+                # Prepare generation kwargs with modern parameters to avoid deprecation warnings
+                # Using task and language parameters instead of deprecated forced_decoder_ids
+                generate_kwargs = {
+                    "input_features": input_features,
+                    "max_new_tokens": 128,
+                    "task": "transcribe",  # Explicitly set task to avoid forced_decoder_ids deprecation
+                    "language": None,  # None = auto-detect language (set to "en" for English-only transcription)
+                }
+                
+                # Set pad_token_id to eos_token_id to avoid attention mask warning
+                # This tells the model how to handle padding during generation
+                if hasattr(self.model.config, 'eos_token_id') and self.model.config.eos_token_id is not None:
+                    generate_kwargs["pad_token_id"] = self.model.config.eos_token_id
+                
                 if self.device.startswith("cuda"):
-                    predicted_ids = self.model.generate(
-                        input_features,
-                        max_new_tokens=128,
-                        num_beams=5,
-                        use_cache=True
-                    )
-                else:
-                    predicted_ids = self.model.generate(
-                        input_features,
-                        max_new_tokens=128
-                    )
+                    generate_kwargs.update({
+                        "num_beams": 5,
+                        "use_cache": True
+                    })
+                
+                predicted_ids = self.model.generate(**generate_kwargs)
+                
             transcript = self.processor.batch_decode(
                 predicted_ids,
                 skip_special_tokens=True

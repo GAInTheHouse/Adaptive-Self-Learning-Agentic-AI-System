@@ -441,24 +441,38 @@ class AdaptiveScheduler:
             self.error_samples_collected = data.get('error_samples_collected', 0)
             
             # Load fine-tuning history
-            self.fine_tuning_history = [
-                FineTuningEvent(**event_data)
-                for event_data in data.get('fine_tuning_history', [])
-            ]
+            self.fine_tuning_history = []
+            for event_data in data.get('fine_tuning_history', []):
+                try:
+                    event = FineTuningEvent(**event_data)
+                    self.fine_tuning_history.append(event)
+                except (TypeError, ValueError) as e:
+                    logger.warning(f"Failed to load fine-tuning event: {e}")
+                    continue
             
             # Load performance history (limited to window size)
             performance_data = data.get('performance_history', [])
             for metric_data in performance_data[-self.performance_window_size:]:
-                metric = PerformanceMetrics(
-                    timestamp=datetime.fromisoformat(metric_data['timestamp']),
-                    error_count=metric_data['error_count'],
-                    accuracy=metric_data['accuracy'],
-                    wer=metric_data.get('wer'),
-                    cer=metric_data.get('cer'),
-                    inference_time=metric_data.get('inference_time', 0.0),
-                    cost_per_inference=metric_data.get('cost_per_inference', 0.0)
-                )
-                self.performance_history.append(metric)
+                try:
+                    # Validate timestamp before parsing
+                    timestamp_str = metric_data.get('timestamp')
+                    if not timestamp_str:
+                        logger.warning("Missing timestamp in performance metric, skipping")
+                        continue
+                    
+                    metric = PerformanceMetrics(
+                        timestamp=datetime.fromisoformat(timestamp_str),
+                        error_count=metric_data['error_count'],
+                        accuracy=metric_data['accuracy'],
+                        wer=metric_data.get('wer'),
+                        cer=metric_data.get('cer'),
+                        inference_time=metric_data.get('inference_time', 0.0),
+                        cost_per_inference=metric_data.get('cost_per_inference', 0.0)
+                    )
+                    self.performance_history.append(metric)
+                except (TypeError, ValueError, KeyError) as e:
+                    logger.warning(f"Failed to load performance metric: {e}")
+                    continue
             
             logger.info(f"Loaded scheduler history from {self.history_path}")
         except Exception as e:
