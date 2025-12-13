@@ -32,7 +32,8 @@ class OllamaLLM:
     def __init__(
         self,
         model_name: str = "llama3.2:3b",
-        base_url: str = "http://localhost:11434"
+        base_url: str = "http://localhost:11434",
+        raise_on_error: bool = False
     ):
         """
         Initialize Ollama LLM.
@@ -40,21 +41,31 @@ class OllamaLLM:
         Args:
             model_name: Ollama model name (e.g., "llama3.2:3b", "llama3.1:8b", "llama2:7b")
             base_url: Ollama server URL (default: http://localhost:11434)
+            raise_on_error: If True, raise exceptions on initialization failure. If False, mark as unavailable.
         
         Raises:
-            ImportError: If Ollama package is not installed
-            ConnectionError: If Ollama server is not running
-            ValueError: If specified model is not available
+            ImportError: If Ollama package is not installed and raise_on_error=True
+            ConnectionError: If Ollama server is not running and raise_on_error=True
+            ValueError: If specified model is not available and raise_on_error=True
         """
         if not OLLAMA_AVAILABLE:
-            raise ImportError(
-                "Ollama package not found. Install with: pip install ollama\n"
-                "Then install Ollama: https://ollama.ai/download"
-            )
+            if raise_on_error:
+                raise ImportError(
+                    "Ollama package not found. Install with: pip install ollama\n"
+                    "Then install Ollama: https://ollama.ai/download"
+                )
+            else:
+                logger.warning("Ollama package not found. Ollama LLM will be unavailable.")
+                self.model_name = model_name
+                self.base_url = base_url
+                self.client = None
+                self._available = False
+                return
         
         self.model_name = model_name
         self.base_url = base_url
         self.client = None
+        self._available = False
         
         logger.info(f"Initializing Ollama LLM with model: {model_name}")
         
@@ -64,12 +75,20 @@ class OllamaLLM:
             ollama.list()  # This will fail if server is not running
             logger.info("✓ Ollama server connection successful")
         except Exception as e:
-            raise ConnectionError(
-                f"Ollama server is not running or not accessible at {base_url}.\n"
-                f"Error: {e}\n"
-                f"Please start Ollama server with: ollama serve\n"
-                f"Or install Ollama from: https://ollama.ai/download"
-            )
+            if raise_on_error:
+                raise ConnectionError(
+                    f"Ollama server is not running or not accessible at {base_url}.\n"
+                    f"Error: {e}\n"
+                    f"Please start Ollama server with: ollama serve\n"
+                    f"Or install Ollama from: https://ollama.ai/download"
+                )
+            else:
+                logger.warning(
+                    f"Ollama server is not running or not accessible at {base_url}. "
+                    f"Ollama LLM will be unavailable. Error: {e}"
+                )
+                self._available = False
+                return
         
         # Check if model is available
         try:
@@ -138,30 +157,55 @@ class OllamaLLM:
                     break
             
             if not model_found:
-                raise ValueError(
-                    f"Model '{model_name}' is not available in Ollama.\n"
-                    f"Available models: {', '.join(available_models) if available_models else 'None (no models installed)'}\n"
-                    f"Please pull the model with: ollama pull {model_name}\n"
-                    f"Supported models: llama3.2:3b, llama3.1:8b, llama2:7b\n"
-                    f"Or use one of the available models above."
-                )
+                if raise_on_error:
+                    raise ValueError(
+                        f"Model '{model_name}' is not available in Ollama.\n"
+                        f"Available models: {', '.join(available_models) if available_models else 'None (no models installed)'}\n"
+                        f"Please pull the model with: ollama pull {model_name}\n"
+                        f"Supported models: llama3.2:3b, llama3.1:8b, llama2:7b\n"
+                        f"Or use one of the available models above."
+                    )
+                else:
+                    logger.warning(
+                        f"Model '{model_name}' is not available in Ollama. "
+                        f"Available models: {', '.join(available_models) if available_models else 'None (no models installed)'}. "
+                        f"Ollama LLM will be unavailable."
+                    )
+                    self._available = False
+                    return
             
             logger.info(f"✓ Model '{model_name}' is available (matched: {matched_model})")
+            self._available = True
         except ValueError as e:
-            # Re-raise ValueError as-is (it has helpful messages)
-            raise
+            # Re-raise ValueError as-is if raise_on_error is True
+            if raise_on_error:
+                raise
+            else:
+                logger.warning(f"Model validation failed: {e}. Ollama LLM will be unavailable.")
+                self._available = False
+                return
         except KeyError as e:
-            raise RuntimeError(
-                f"Failed to parse Ollama model list: unexpected structure (key: {e})\n"
-                f"Please ensure Ollama is properly installed and running.\n"
-                f"You can verify by running: ollama list"
-            )
+            if raise_on_error:
+                raise RuntimeError(
+                    f"Failed to parse Ollama model list: unexpected structure (key: {e})\n"
+                    f"Please ensure Ollama is properly installed and running.\n"
+                    f"You can verify by running: ollama list"
+                )
+            else:
+                logger.warning(f"Failed to parse Ollama model list: {e}. Ollama LLM will be unavailable.")
+                self._available = False
+                return
         except Exception as e:
-            raise RuntimeError(
-                f"Failed to check model availability: {e}\n"
-                f"Please ensure Ollama is properly installed and running.\n"
-                f"You can verify by running: ollama list"
-            )
+            if raise_on_error:
+                raise RuntimeError(
+                    f"Failed to check model availability: {e}\n"
+                    f"Please ensure Ollama is properly installed and running.\n"
+                    f"You can verify by running: ollama list"
+                )
+            else:
+                logger.warning(f"Failed to check model availability: {e}. Ollama LLM will be unavailable.")
+                self._available = False
+                return
         
         logger.info(f"✅ Ollama LLM initialized successfully with model: {model_name}")
     
@@ -179,7 +223,13 @@ class OllamaLLM:
         
         Returns:
             Generated text
+        
+        Raises:
+            RuntimeError: If Ollama is not available or generation fails
         """
+        if not self.is_available():
+            raise RuntimeError("Ollama LLM is not available. Check initialization or start Ollama server.")
+        
         try:
             response = ollama.generate(
                 model=self.model_name,
@@ -215,7 +265,13 @@ class OllamaLLM:
         
         Returns:
             Generated response
+        
+        Raises:
+            RuntimeError: If Ollama is not available or chat fails
         """
+        if not self.is_available():
+            raise RuntimeError("Ollama LLM is not available. Check initialization or start Ollama server.")
+        
         try:
             response = ollama.chat(
                 model=self.model_name,
@@ -248,6 +304,11 @@ class OllamaLLM:
         Returns:
             True if Ollama is available, False otherwise
         """
+        # If _available attribute exists, use it (set during initialization)
+        if hasattr(self, '_available'):
+            return self._available
+        
+        # Fallback: check if Ollama is available
         if not OLLAMA_AVAILABLE:
             return False
         
