@@ -267,7 +267,7 @@ experiments/test_*.py          # Test scripts
 experiments/kavya_evaluation_framework.py  # Evaluation
 requirements.txt               # Dependencies
 README.md                      # Full documentation
-SETUP_INSTRUCTIONS.md          # Detailed setup
+docs/SETUP_INSTRUCTIONS.md     # Detailed setup
 ```
 
 ## 🔑 Key Concepts
@@ -306,6 +306,6 @@ ls docs/
 
 For detailed information, see:
 - **README.md** - Full project documentation
-- **SETUP_INSTRUCTIONS.md** - Detailed setup guide
+- **docs/SETUP_INSTRUCTIONS.md** - Detailed setup guide
 - **docs/** - Component-specific guides
 

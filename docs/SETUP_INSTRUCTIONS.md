@@ -896,8 +896,6 @@ Once setup is complete:
 - **[docs/DATA_MANAGEMENT_SYSTEM.md](docs/DATA_MANAGEMENT_SYSTEM.md)** - Complete data management guide
 - **[docs/QUICK_START_DATA_MANAGEMENT.md](docs/QUICK_START_DATA_MANAGEMENT.md)** - Quick start for data management
 - **[docs/GCP_SETUP_GUIDE.md](docs/GCP_SETUP_GUIDE.md)** - Detailed GCP guide
-- **[WEEK1_DELIVERABLES_REPORT.md](WEEK1_DELIVERABLES_REPORT.md)** - Week 1 report
-- **[WEEK2_DELIVERABLES_REPORT.md](WEEK2_DELIVERABLES_REPORT.md)** - Week 2 report
 
 ---
 

@@ -13,6 +13,7 @@ A production-ready, self-improving speech-to-text system with autonomous error d
 - [Development Workflows](#development-workflows)
 - [Testing](#testing)
 - [Documentation](#documentation)
+- [Tutorials](#tutorials)
 
 ## 🎯 Overview
 
@@ -107,9 +108,7 @@ Adaptive-Self-Learning-Agentic-AI-System/
 │
 ├── requirements.txt              # Python dependencies
 ├── README.md                     # This file
-├── SETUP_INSTRUCTIONS.md         # Detailed setup guide
-├── WEEK1_DELIVERABLES_REPORT.md  # Week 1 completion report
-├── WEEK2_DELIVERABLES_REPORT.md  # Week 2 completion report
+├── docs/SETUP_INSTRUCTIONS.md     # Detailed setup guide
 └── docs/DATA_MANAGEMENT_SYSTEM.md # Data management guide
 ```
 
@@ -756,14 +755,33 @@ python scripts/monitor_gcp_costs.py
 
 ## 📚 Documentation
 
-- **[SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md)** - Detailed setup guide
+- **[docs/SETUP_INSTRUCTIONS.md](docs/SETUP_INSTRUCTIONS.md)** - Detailed setup guide
 - **[docs/DATA_MANAGEMENT_SYSTEM.md](docs/DATA_MANAGEMENT_SYSTEM.md)** - Complete data management guide
 - **[docs/QUICK_START_DATA_MANAGEMENT.md](docs/QUICK_START_DATA_MANAGEMENT.md)** - Quick start for data management
 - **[docs/DATA_MANAGEMENT_SYSTEM.md](docs/DATA_MANAGEMENT_SYSTEM.md)** - Complete data management API
 - **[docs/QUICK_START_DATA_MANAGEMENT.md](docs/QUICK_START_DATA_MANAGEMENT.md)** - Quick start for data management
 - **[docs/GCP_SETUP_GUIDE.md](docs/GCP_SETUP_GUIDE.md)** - GCP setup instructions
-- **[WEEK1_DELIVERABLES_REPORT.md](WEEK1_DELIVERABLES_REPORT.md)** - Week 1 completion report
-- **[WEEK2_DELIVERABLES_REPORT.md](WEEK2_DELIVERABLES_REPORT.md)** - Week 2 completion report
+
+## 🎥 Tutorials
+
+### Complete System Overview Video
+
+Watch our comprehensive tutorial video that covers everything you need to get started:
+
+**[📹 Watch Complete Tutorial Video](docs/submission/Presentation_Demo_Tutorial.mp4)**
+
+**What's included in the video:**
+- 🎯 **Project Presentation** - Overview of the Adaptive Self-Learning Agentic AI System
+- 🚀 **System Demo** - Live demonstration of transcription, error detection, and data management
+- 🛠️ **Repository Setup** - Step-by-step guide to setting up the repository and dependencies
+- 💡 **Key Features Walkthrough** - Deep dive into agent system, data management, and fine-tuning
+
+### Additional Tutorial Resources
+
+- **[docs/UI_TUTORIAL.md](docs/UI_TUTORIAL.md)** - Control Panel UI walkthrough
+- **[docs/CONTROL_PANEL_GUIDE.md](docs/CONTROL_PANEL_GUIDE.md)** - Complete control panel guide
+- **[docs/FINETUNING_QUICK_START.md](docs/FINETUNING_QUICK_START.md)** - Fine-tuning tutorial
+- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Quick command reference
 
 ## 📊 Performance Metrics
 
