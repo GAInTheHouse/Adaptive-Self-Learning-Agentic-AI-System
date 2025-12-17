@@ -65,7 +65,7 @@ Automated startup script with conda environment support:
 ### 4. **Comprehensive Documentation**
 
 **Files Created:**
-- `CONTROL_PANEL_GUIDE.md` (452 lines) - Complete user guide
+- `docs/CONTROL_PANEL_GUIDE.md` (452 lines) - Complete user guide
 - `CONTROL_PANEL_SUMMARY.md` (This file) - Implementation summary
 - `frontend/README.md` - Frontend-specific documentation
 
@@ -395,7 +395,7 @@ pip install -r requirements.txt
 
 ## 📚 Documentation Files
 
-1. **CONTROL_PANEL_GUIDE.md** (452 lines)
+1. **docs/CONTROL_PANEL_GUIDE.md** (452 lines)
    - Comprehensive user guide
    - Feature descriptions
    - API reference
@@ -456,14 +456,14 @@ pip install -r requirements.txt
 - [ ] Check system health on dashboard
 - [ ] Try transcribing a test audio file
 - [ ] Explore other tabs and features
-- [ ] Read CONTROL_PANEL_GUIDE.md for detailed usage
+- [ ] Read docs/CONTROL_PANEL_GUIDE.md for detailed usage
 
 ---
 
 ## 📞 Support
 
 For help with the control panel:
-1. **User Guide**: CONTROL_PANEL_GUIDE.md
+1. **User Guide**: docs/CONTROL_PANEL_GUIDE.md
 2. **API Docs**: http://localhost:8000/docs
 3. **Frontend Docs**: frontend/README.md
 4. **Main Project**: README.md

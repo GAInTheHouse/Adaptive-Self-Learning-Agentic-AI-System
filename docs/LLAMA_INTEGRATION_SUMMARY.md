@@ -225,8 +225,7 @@ agent = STTAgent(
 7. `experiments/test_agent.py` - Agent testing script
 
 ### Documentation (2 files):
-8. `WEEK2_DELIVERABLES_REPORT.md` - Week 2 report
-9. `GEMMA_INTEGRATION_SUMMARY.md` - **NEW** This file
+8. Documentation files are in the `docs/` directory
 
 **Total: 9 files** (was 7, added 2 new files)
 

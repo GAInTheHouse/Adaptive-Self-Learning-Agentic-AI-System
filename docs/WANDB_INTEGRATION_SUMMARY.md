@@ -127,7 +127,7 @@ W&B automatically generates:
    - 6 different tracking scenarios
    - Working examples
 
-6. **Updated: `FINETUNING_QUICK_START.md`**
+6. **Updated: `docs/FINETUNING_QUICK_START.md`**
    - W&B section added
    - Quick setup guide
 

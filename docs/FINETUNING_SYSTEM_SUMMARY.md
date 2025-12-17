@@ -206,7 +206,7 @@ python scripts/deploy_finetuning_to_gcp.py \
    - Troubleshooting guide
    - Best practices
 
-2. **`FINETUNING_QUICK_START.md`** (Quick start guide)
+2. **`docs/FINETUNING_QUICK_START.md`** (Quick start guide)
    - 5-minute setup
    - Basic usage examples
    - Configuration templates
@@ -263,8 +263,6 @@ experiments/
 
 docs/
 └── FINETUNING_ORCHESTRATION.md   # Complete documentation
-
-Root:
 ├── FINETUNING_QUICK_START.md     # Quick start guide
 └── FINETUNING_SYSTEM_SUMMARY.md  # This file
 ```
@@ -501,7 +499,7 @@ python scripts/deploy_finetuning_to_gcp.py \
 ## 📞 Support
 
 - **Full Documentation:** `docs/FINETUNING_ORCHESTRATION.md`
-- **Quick Start:** `FINETUNING_QUICK_START.md`
+- **Quick Start:** `docs/FINETUNING_QUICK_START.md`
 - **Demo:** `experiments/demo_finetuning_orchestration.py`
 - **API Reference:** See inline documentation in source files
 

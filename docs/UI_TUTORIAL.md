@@ -584,7 +584,7 @@ Here's a suggested flow for demonstrating the system:
 
 - **Project Documentation**: See `docs/` directory
 - **API Documentation**: Built-in at `/docs` endpoint
-- **Setup Guide**: See `SETUP_INSTRUCTIONS.md`
+- **Setup Guide**: See `docs/SETUP_INSTRUCTIONS.md`
 
 ---
 
