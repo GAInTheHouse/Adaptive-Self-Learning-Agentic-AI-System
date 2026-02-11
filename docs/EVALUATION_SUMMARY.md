@@ -105,7 +105,7 @@ experiments/evaluation_outputs/
 │   ├── wer_cer_comparison.png     # WER/CER comparison chart
 │   ├── error_distribution.png     # Error distribution histogram
 │   └── evaluation_dashboard.png   # Comprehensive dashboard
-└── EVALUATION_SUMMARY.md          # This summary document
+└── (see docs/EVALUATION_SUMMARY.md for this summary)
 ```
 
 ## 🚀 Next Steps

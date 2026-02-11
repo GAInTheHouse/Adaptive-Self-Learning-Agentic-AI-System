@@ -101,16 +101,17 @@ Adaptive-Self-Learning-Agentic-AI-System/
 │   └── versions/                 # Dataset versions
 │
 ├── docs/                         # Documentation
-│   ├── DATA_MANAGEMENT_SYSTEM.md # Data management guide
-│   ├── QUICK_START_DATA_MANAGEMENT.md # Quick start
-│   └── GCP_SETUP_GUIDE.md        # GCP setup instructions
+│   ├── SETUP_INSTRUCTIONS.md     # Setup guide
+│   ├── TESTING_GUIDE.md          # Testing guide
+│   ├── DATA_MANAGEMENT_SYSTEM.md # Data management
+│   ├── FINETUNING.md             # Fine-tuning (script + orchestration)
+│   ├── WANDB.md                  # Weights & Biases integration
+│   ├── CONTROL_PANEL.md          # Control panel UI
+│   ├── GCP.md                    # Google Cloud setup & deployment
+│   ├── QUICK_REFERENCE.md        # Command reference
+│   └── LLM_INTEGRATION.md        # Gemma LLM integration
 │
-├── requirements.txt              # Python dependencies
-├── README.md                     # This file
-├── SETUP_INSTRUCTIONS.md         # Detailed setup guide
-├── WEEK1_DELIVERABLES_REPORT.md  # Week 1 completion report
-├── WEEK2_DELIVERABLES_REPORT.md  # Week 2 completion report
-└── docs/DATA_MANAGEMENT_SYSTEM.md # Data management guide
+└── requirements.txt              # Python dependencies
 ```
 
 ## 🚀 Quick Start
@@ -351,7 +352,7 @@ python kavya_evaluation_framework.py
 Output:
 - `evaluation_outputs/evaluation_report.json` - Detailed results
 - `evaluation_outputs/evaluation_summary.json` - Summary metrics
-- `evaluation_outputs/EVALUATION_SUMMARY.md` - Human-readable report
+- `docs/EVALUATION_SUMMARY.md` - Human-readable report
 - `evaluation_outputs/visualizations/` - Charts and graphs
 
 #### Run Benchmark Tests
@@ -756,14 +757,13 @@ python scripts/monitor_gcp_costs.py
 
 ## 📚 Documentation
 
-- **[SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md)** - Detailed setup guide
-- **[docs/DATA_MANAGEMENT_SYSTEM.md](docs/DATA_MANAGEMENT_SYSTEM.md)** - Complete data management guide
-- **[docs/QUICK_START_DATA_MANAGEMENT.md](docs/QUICK_START_DATA_MANAGEMENT.md)** - Quick start for data management
-- **[docs/DATA_MANAGEMENT_SYSTEM.md](docs/DATA_MANAGEMENT_SYSTEM.md)** - Complete data management API
-- **[docs/QUICK_START_DATA_MANAGEMENT.md](docs/QUICK_START_DATA_MANAGEMENT.md)** - Quick start for data management
-- **[docs/GCP_SETUP_GUIDE.md](docs/GCP_SETUP_GUIDE.md)** - GCP setup instructions
-- **[WEEK1_DELIVERABLES_REPORT.md](WEEK1_DELIVERABLES_REPORT.md)** - Week 1 completion report
-- **[WEEK2_DELIVERABLES_REPORT.md](WEEK2_DELIVERABLES_REPORT.md)** - Week 2 completion report
+- **[docs/SETUP_INSTRUCTIONS.md](docs/SETUP_INSTRUCTIONS.md)** - Setup guide
+- **[docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md)** - Testing guide
+- **[docs/DATA_MANAGEMENT_SYSTEM.md](docs/DATA_MANAGEMENT_SYSTEM.md)** - Data management
+- **[docs/FINETUNING.md](docs/FINETUNING.md)** - Fine-tuning
+- **[docs/CONTROL_PANEL.md](docs/CONTROL_PANEL.md)** - Control panel
+- **[docs/GCP.md](docs/GCP.md)** - GCP setup & deployment
+- **[docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)** - Command reference
 
 ## 📊 Performance Metrics
 
