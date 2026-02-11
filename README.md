@@ -102,15 +102,25 @@ Adaptive-Self-Learning-Agentic-AI-System/
 │   └── versions/                 # Dataset versions
 │
 ├── docs/                         # Documentation
-│   ├── DATA_MANAGEMENT_SYSTEM.md # Data management guide
-│   ├── QUICK_START_DATA_MANAGEMENT.md # Quick start
-│   └── GCP_SETUP_GUIDE.md        # GCP setup instructions
+│   ├── SETUP_INSTRUCTIONS.md     # Setup guide
+│   ├── TESTING_GUIDE.md          # Testing guide
+│   ├── DATA_MANAGEMENT_SYSTEM.md # Data management
+│   ├── FINETUNING.md             # Fine-tuning (script + orchestration)
+│   ├── WANDB.md                  # Weights & Biases integration
+│   ├── CONTROL_PANEL.md          # Control panel UI
+│   ├── GCP.md                    # Google Cloud setup & deployment
+│   ├── QUICK_REFERENCE.md        # Command reference
+│   └── LLM_INTEGRATION.md        # Gemma LLM integration
 │
+<<<<<<< HEAD
 ├── requirements.txt              # Python dependencies
 ├── README.md                     # This file
 ├── docs/SETUP_INSTRUCTIONS.md     # Detailed setup guide
 ├── docs/SETUP_INSTRUCTIONS.md     # Detailed setup guide
 └── docs/DATA_MANAGEMENT_SYSTEM.md # Data management guide
+=======
+└── requirements.txt              # Python dependencies
+>>>>>>> 88aca83 (clean up repeated .md files)
 ```
 
 ## 🚀 Quick Start
@@ -756,6 +766,7 @@ python scripts/monitor_gcp_costs.py
 
 ## 📚 Documentation
 
+<<<<<<< HEAD
 - **[docs/SETUP_INSTRUCTIONS.md](docs/SETUP_INSTRUCTIONS.md)** - Detailed setup guide
 - **[docs/DATA_MANAGEMENT_SYSTEM.md](docs/DATA_MANAGEMENT_SYSTEM.md)** - Complete data management guide
 - **[docs/QUICK_START_DATA_MANAGEMENT.md](docs/QUICK_START_DATA_MANAGEMENT.md)** - Quick start for data management
@@ -783,6 +794,15 @@ Watch our comprehensive tutorial video that covers everything you need to get st
 - **[docs/CONTROL_PANEL_GUIDE.md](docs/CONTROL_PANEL_GUIDE.md)** - Complete control panel guide
 - **[docs/FINETUNING_QUICK_START.md](docs/FINETUNING_QUICK_START.md)** - Fine-tuning tutorial
 - **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Quick command reference
+=======
+- **[docs/SETUP_INSTRUCTIONS.md](docs/SETUP_INSTRUCTIONS.md)** - Setup guide
+- **[docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md)** - Testing guide
+- **[docs/DATA_MANAGEMENT_SYSTEM.md](docs/DATA_MANAGEMENT_SYSTEM.md)** - Data management
+- **[docs/FINETUNING.md](docs/FINETUNING.md)** - Fine-tuning
+- **[docs/CONTROL_PANEL.md](docs/CONTROL_PANEL.md)** - Control panel
+- **[docs/GCP.md](docs/GCP.md)** - GCP setup & deployment
+- **[docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)** - Command reference
+>>>>>>> 88aca83 (clean up repeated .md files)
 
 ## 📊 Performance Metrics
 
