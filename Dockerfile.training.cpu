@@ -1,0 +1,129 @@
+# Dockerfile for Training Environment (CPU-only version)
+# Alternative version for local testing without GPU
+# Week 1 Task: Dockerize local training environment with LoRA and Wav2Vec2 support
+
+# Use Python base image for CPU-only training
+FROM python:3.10-slim
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
+ENV CUDA_VISIBLE_DEVICES=""
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies for audio processing and training
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    make \
+    libsndfile1 \
+    ffmpeg \
+    sox \
+    curl \
+    git \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip
+RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel
+
+    # Install PyTorch CPU-only version (for local testing)
+    # Use compatible versions: torchaudio 2.0.1 requires torch 2.0.0
+    RUN pip3 install --no-cache-dir \
+        torch==2.0.0 \
+        torchvision==0.15.1 \
+        torchaudio==2.0.1 \
+        --index-url https://download.pytorch.org/whl/cpu
+
+# Install core ML libraries for training
+RUN pip3 install --no-cache-dir \
+    transformers>=4.35.0 \
+    accelerate>=0.24.0 \
+    datasets>=2.14.0 \
+    peft>=0.8.0
+
+# Install audio processing libraries
+RUN pip3 install --no-cache-dir \
+    librosa>=0.10.0 \
+    soundfile>=0.12.0 \
+    pydub>=0.25.0 \
+    audioread>=3.0.0 \
+    sox>=1.4.1
+
+# Install evaluation metrics
+RUN pip3 install --no-cache-dir \
+    jiwer>=3.0.0
+
+# Install Google Cloud libraries for GCS integration
+RUN pip3 install --no-cache-dir \
+    google-cloud-storage>=2.10.0 \
+    gcsfs>=2023.6.0 \
+    google-auth>=2.23.0
+
+# Install data processing libraries
+RUN pip3 install --no-cache-dir \
+    pandas>=2.0.0 \
+    numpy>=1.24.0 \
+    scikit-learn>=1.3.0 \
+    scipy>=1.11.0
+
+# Install visualization libraries (for training monitoring)
+RUN pip3 install --no-cache-dir \
+    matplotlib>=3.7.0 \
+    seaborn>=0.12.0
+
+# Install experiment tracking
+RUN pip3 install --no-cache-dir \
+    wandb>=0.16.0
+
+# Install utilities
+RUN pip3 install --no-cache-dir \
+    tqdm>=4.65.0 \
+    pyyaml>=6.0 \
+    python-dotenv>=1.0.0 \
+    importlib-metadata
+
+# Copy requirements.txt for any additional dependencies
+COPY requirements.txt /app/requirements.txt
+
+# Install any remaining dependencies from requirements.txt
+# Skip FastAPI/uvicorn for training container (not needed)
+RUN pip3 install --no-cache-dir -r requirements.txt || \
+    pip3 install --no-cache-dir $(grep -v "fastapi\|uvicorn\|bitsandbytes" requirements.txt | grep -v "^#" | grep -v "^$") || true
+
+# Copy source code
+COPY src/ /app/src/
+COPY scripts/ /app/scripts/
+# Create experiments directory (will be mounted or created at runtime)
+RUN mkdir -p /app/experiments
+
+# Create necessary directories for training
+RUN mkdir -p \
+    /app/data/raw \
+    /app/data/processed \
+    /app/data/finetuning \
+    /app/data/checkpoints \
+    /app/data/models \
+    /app/data/logs \
+    /app/data/cache
+
+# Set up training scripts as executable
+RUN chmod +x /app/scripts/finetune_wav2vec2.py
+
+# Verify installations (CPU version)
+RUN python3 -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA Available: {torch.cuda.is_available()}')" && \
+    python3 -c "import transformers; print(f'Transformers: {transformers.__version__}')" && \
+    python3 -c "from peft import LoraConfig; print('PEFT/LoRA: Available')" && \
+    python3 -c "from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor; print('Wav2Vec2: Available')" && \
+    python3 -c "import librosa; print(f'Librosa: {librosa.__version__}')" && \
+    python3 -c "import jiwer; print('jiwer: Available')"
+
+# Default command (can be overridden)
+CMD ["/bin/bash"]
+
+# Health check for training container
+HEALTHCHECK --interval=60s --timeout=30s --start-period=120s --retries=3 \
+    CMD python3 -c "import torch; import transformers; import peft; print('Training environment ready')" || exit 1
