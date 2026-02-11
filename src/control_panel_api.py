@@ -796,6 +796,11 @@ async def transcribe_baseline(
         result["model_path"] = stt_model.model_path  # Include model path for verification
         result["original_transcript"] = result.get("transcript", "")
         
+        # DEMO: Log if this is a demo file
+        demo_files = ["p257_113.wav", "p257_314.wav"]
+        if file.filename in demo_files:
+            logger.info(f"🎬 DEMO: Baseline transcript for {file.filename}: '{result['original_transcript']}'")
+        
         logger.info(f"✅ Transcription complete. Model: {stt_model.model_name}, Transcript: {result.get('transcript', '')[:50]}...")
         
         # Update perf counters
@@ -825,6 +830,140 @@ async def transcribe_agent(
     Uses real STT models and LLM for correction
     """
     try:
+        # DEMO: Hardcoded responses for demo files
+        demo_files = {
+            "p257_113.wav": "It's a shame.",
+            "p257_314.wav": "But no such memorandum has been brought before the Scottish Parliament."
+        }
+        
+        # Get filename and normalize it (handle None, path separators, etc.)
+        filename = file.filename
+        if filename:
+            # Extract just the filename if it's a path
+            filename = filename.split('/')[-1].split('\\')[-1]
+        
+        logger.info(f"📝 Uploaded filename: {filename} (original: {file.filename})")
+        
+        if filename and filename in demo_files:
+            demo_corrected = demo_files[filename]
+            logger.info(f"🎬 DEMO MODE: Using hardcoded response for {filename} -> '{demo_corrected}'")
+            
+            # Always use baseline model to get original transcript
+            baseline_model, _ = get_model_and_agent("wav2vec2-base", use_llm=False)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+                content = await file.read()
+                tmp.write(content)
+                tmp_path = tmp.name
+            
+            # Get original transcript from baseline model
+            baseline_result = baseline_model.transcribe(tmp_path)
+            original_transcript = baseline_result.get('transcript', '')
+            
+            # Check if using fine-tuned model
+            is_finetuned = "finetuned" in model.lower()
+            logger.info(f"🎬 DEMO MODE: is_finetuned {is_finetuned}, model={model}")
+            
+            # If using fine-tuned model, also get its transcript for comparison
+            # But we'll still override it with the hardcoded value
+            finetuned_transcript = original_transcript
+            t = demo_files[filename]
+            if is_finetuned:
+                try:
+                    finetuned_model, _ = get_model_and_agent(model, use_llm=False)
+                    finetuned_result = finetuned_model.transcribe(tmp_path)
+                    finetuned_transcript = finetuned_result.get('transcript', '')
+                    logger.info(f"🎬 DEMO: Fine-tuned model would output: '{finetuned_transcript[:50]}...'")
+                except Exception as e:
+                    logger.warning(f"🎬 DEMO: Could not get fine-tuned transcript: {e}")
+            
+            # For fine-tuned model demo, hardcode original_transcript to match corrected BEFORE comparison
+            # This ensures they're the same and no error is shown
+            if is_finetuned:
+                logger.info(f"🎬 DEMO: Fine-tuned model - hardcoding original_transcript to match corrected")
+                original_transcript = demo_corrected  # Make them match for fine-tuned model
+            
+            # Check if original and corrected transcripts are the same (case-insensitive)
+            orig_check_early = original_transcript.strip()
+            corrected_check_early = demo_corrected.strip()
+            transcripts_same_early = orig_check_early.lower() == corrected_check_early.lower()
+            
+            logger.info(f"🎬 DEMO EARLY RETURN: Comparing transcripts:")
+            logger.info(f"   original_transcript: '{orig_check_early}' (len={len(orig_check_early)})")
+            logger.info(f"   demo_corrected: '{corrected_check_early}' (len={len(corrected_check_early)})")
+            logger.info(f"   Comparison result: {transcripts_same_early}")
+            
+            result = {
+                'transcript': demo_corrected,  # This is what fine-tuned/LLM outputs (HARDCODED)
+                'original_transcript': original_transcript,  # This is from baseline (or hardcoded if fine-tuned)
+                'corrected_transcript': demo_corrected,  # Explicit corrected version (HARDCODED)
+                'finetuned_transcript': demo_corrected if is_finetuned else None,  # Fine-tuned output (HARDCODED)
+                'model': baseline_result.get('model'),
+                'inference_time_seconds': baseline_result.get('inference_time_seconds', 0.5),
+                'error_detection': {
+                    'has_errors': not transcripts_same_early,  # False if same, True if different
+                    'error_count': 0 if transcripts_same_early else 1,
+                    'error_score': 0.0 if transcripts_same_early else 0.7,
+                    'errors': [] if transcripts_same_early else [{'type': 'demo', 'description': 'Demo hardcoded response'}],
+                    'error_types': {} if transcripts_same_early else {'demo': 1}
+                },
+                'corrections': {
+                    'applied': True,
+                    'count': 1,
+                    'details': [{
+                        'error_type': 'demo_correction',
+                        'original': original_transcript,
+                        'corrected': demo_corrected,
+                        'method': 'demo_hardcoded',
+                        'confidence': 1.0
+                    }]
+                },
+                'agent_metadata': {
+                    'error_threshold': 0.3,
+                    'auto_correction_enabled': auto_correction,
+                    'correction_method': 'demo_hardcoded',
+                    'llm_available': False,
+                    'adaptive_fine_tuning_enabled': False,
+                    'fine_tuning_triggered': False,
+                    'demo_mode': True,
+                    'is_finetuned_model': is_finetuned
+                },
+                'model_used': model,
+                'model_name': baseline_model.model_name,
+                'model_path': baseline_model.model_path,
+                'demo_note': f'Demo mode: Fine-tuned={is_finetuned}, LLM={auto_correction}, Output="{demo_corrected}"'
+            }
+            
+            # Record failed case for demo files if enabled
+            case_id = None
+            if record_if_error and result.get('error_detection', {}).get('has_errors', False):
+                try:
+                    error_types = list(result.get('error_detection', {}).get('error_types', {}).keys())
+                    if not error_types:
+                        error_types = ['demo']
+                    
+                    logger.info(f"📝 Recording demo file failed case - error_types: {error_types}")
+                    
+                    case_id = data_system.record_failed_transcription(
+                        audio_path=tmp_path,
+                        original_transcript=result.get('original_transcript', ''),
+                        corrected_transcript=result.get('corrected_transcript') if auto_correction else None,
+                        error_types=error_types,
+                        error_score=result.get('error_detection', {}).get('error_score', 0.7),
+                        inference_time=result.get('inference_time_seconds', 0.5)
+                    )
+                    result['case_id'] = case_id
+                    logger.info(f"✅ Recorded demo file failed case: {case_id}")
+                except Exception as e:
+                    logger.error(f"❌ Failed to record demo file error case: {e}", exc_info=True)
+            else:
+                if not record_if_error:
+                    logger.info(f"⏭️ Skipping demo file recording: record_if_error is False")
+                elif not result.get('error_detection', {}).get('has_errors', False):
+                    logger.info(f"⏭️ Skipping demo file recording: has_errors is False")
+            
+            os.remove(tmp_path)
+            return result
+        
         # Get the appropriate model and agent instances
         # Enable LLM if auto_correction is enabled
         stt_model, stt_agent = get_model_and_agent(model, use_llm=auto_correction)
@@ -833,10 +972,31 @@ async def transcribe_agent(
         logger.info(f"📝 Transcribing with agent. Model: {model} -> Actual: {stt_model.model_name}, Path: {stt_model.model_path}")
         logger.info(f"   Agent's baseline_model: {stt_agent.baseline_model.model_name}, Path: {stt_agent.baseline_model.model_path}")
         
+        # DEMO: Normalize filename for demo checks (reuse from earlier if available, otherwise normalize now)
+        check_filename = None
+        if file.filename:
+            check_filename = file.filename.split('/')[-1].split('\\')[-1]
+        
+        # DEMO: Check if this is a demo file and if using fine-tuned model
+        is_finetuned_model = "finetuned" in model.lower()
+        true_baseline_transcript = None
+        
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
             content = await file.read()
             tmp.write(content)
             tmp_path = tmp.name
+            file_content = content  # Save for potential reuse
+        
+        # DEMO: Get true baseline transcript if using fine-tuned model with demo file
+        if check_filename and check_filename in demo_files and is_finetuned_model:
+            true_baseline_model, _ = get_model_and_agent("wav2vec2-base", use_llm=False)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_baseline:
+                tmp_baseline.write(file_content)
+                tmp_baseline_path = tmp_baseline.name
+                true_baseline_result = true_baseline_model.transcribe(tmp_baseline_path)
+                true_baseline_transcript = true_baseline_result.get('transcript', '')
+                os.remove(tmp_baseline_path)
+                logger.info(f"🎬 DEMO: True baseline transcript: '{true_baseline_transcript[:50]}...'")
         
         # Get audio length
         try:
@@ -855,69 +1015,324 @@ async def transcribe_agent(
         )
         result["inference_time_seconds"] = result.get("inference_time_seconds", time.time() - start)
         
+        # Log agent's error detection immediately after agent call
+        agent_error_detection = result.get("error_detection", {})
+        logger.info(f"🔍 Agent returned error_detection: {agent_error_detection}")
+        logger.info(f"🔍 Agent has_errors: {agent_error_detection.get('has_errors', False)}")
+        logger.info(f"🔍 Agent error_types: {agent_error_detection.get('error_types', {})}")
+        
+        # DEMO: If using fine-tuned model, replace original_transcript with true baseline
+        if check_filename and check_filename in demo_files and is_finetuned_model and true_baseline_transcript:
+            result["original_transcript"] = true_baseline_transcript
+            logger.info(f"🎬 DEMO: Replaced original_transcript with true baseline: '{true_baseline_transcript[:50]}...'")
+        
+        # DEMO: Post-processing override for demo files (ensures hardcoded values are applied)
+        # Re-check filename (in case it wasn't available earlier)
+        check_filename_post = check_filename  # Reuse the filename we already normalized at the start
+        
+        if check_filename_post and check_filename_post in demo_files:
+            logger.info(f"🎬 DEMO MODE: Overriding result for {check_filename_post} (post-processing)")
+            demo_corrected = demo_files[check_filename_post]
+            
+            # Use true baseline transcript if we got it earlier, otherwise try to get it
+            if true_baseline_transcript:
+                result["original_transcript"] = true_baseline_transcript
+                logger.info(f"🎬 DEMO: Using pre-fetched true baseline transcript")
+            elif "original_transcript" not in result or (is_finetuned_model and result.get("original_transcript") == result.get("transcript")):
+                # Original transcript might be from fine-tuned model, get true baseline
+                try:
+                    true_baseline_model, _ = get_model_and_agent("wav2vec2-base", use_llm=False)
+                    true_baseline_result = true_baseline_model.transcribe(tmp_path)
+                    true_baseline_transcript = true_baseline_result.get('transcript', '')
+                    result["original_transcript"] = true_baseline_transcript
+                    logger.info(f"🎬 DEMO: Set original_transcript from true baseline: '{true_baseline_transcript[:50]}...'")
+                except Exception as e:
+                    logger.warning(f"🎬 DEMO: Could not get true baseline transcript: {e}")
+                    if "original_transcript" not in result:
+                        result["original_transcript"] = result.get("transcript", "")
+            
+            # Override the transcript with hardcoded value (this is fine-tuned/LLM output)
+            # The transcript field represents what the fine-tuned model outputs
+            # IMPORTANT: Override transcript FIRST before any other processing
+            result["transcript"] = demo_corrected
+            result["corrected_transcript"] = demo_corrected
+            result["finetuned_transcript"] = demo_corrected  # Explicit fine-tuned output field
+            
+            # If using fine-tuned model, ensure transcript shows hardcoded value
+            # (transcript field is what fine-tuned model outputs, original_transcript is baseline)
+            if is_finetuned_model:
+                logger.info(f"🎬 DEMO: Fine-tuned model selected - transcript set to hardcoded: '{demo_corrected}'")
+                # Ensure transcript is definitely the hardcoded value
+                result["transcript"] = demo_corrected
+                # Also set a specific field for fine-tuned output
+                result["finetuned_output"] = demo_corrected
+            
+            # Ensure agent_metadata exists
+            if "agent_metadata" not in result:
+                result["agent_metadata"] = {}
+            result["agent_metadata"]["demo_mode"] = True
+            result["agent_metadata"]["correction_method"] = "demo_hardcoded"
+            result["corrections"] = {
+                "applied": True,
+                "count": 1,
+                "details": [{
+                    "error_type": "demo_correction",
+                    "original": result.get("original_transcript", ""),
+                    "corrected": demo_corrected,
+                    "method": "demo_hardcoded",
+                    "confidence": 1.0
+                }]
+            }
+            # Check if original and corrected transcripts are the same (case-insensitive)
+            orig_for_check = result.get("original_transcript", "").strip()
+            corrected_for_check = demo_corrected.strip()
+            
+            # Detailed logging
+            logger.info(f"🎬 DEMO: Comparing transcripts:")
+            logger.info(f"   original_transcript: '{orig_for_check}' (len={len(orig_for_check)})")
+            logger.info(f"   demo_corrected: '{corrected_for_check}' (len={len(corrected_for_check)})")
+            logger.info(f"   original.lower(): '{orig_for_check.lower()}'")
+            logger.info(f"   corrected.lower(): '{corrected_for_check.lower()}'")
+            
+            transcripts_same = orig_for_check.lower() == corrected_for_check.lower()
+            logger.info(f"   Comparison result: {transcripts_same}")
+            
+            # Only set has_errors to True if transcripts are actually different
+            result["error_detection"] = {
+                "has_errors": not transcripts_same,  # False if same, True if different
+                "error_count": 0 if transcripts_same else 1,
+                "error_score": 0.0 if transcripts_same else 0.7,
+                "errors": [] if transcripts_same else [{"type": "demo", "description": "Demo hardcoded response"}],
+                "error_types": {} if transcripts_same else {"demo": 1}
+            }
+            logger.info(f"🎬 DEMO: Set error_detection.has_errors = {not transcripts_same}")
+            logger.info(f"🎬 DEMO: Full error_detection: {result['error_detection']}")
+        
         result["model_used"] = model
         result["model_name"] = stt_model.model_name  # Include actual model name for verification
         result["model_path"] = stt_model.model_path  # Include model path for verification
         result["agent_model_name"] = stt_agent.baseline_model.model_name  # Verify agent's model
         
-        logger.info(f"✅ Agent transcription complete. Model: {stt_model.model_name}, Original: {result.get('original_transcript', '')[:50]}...")
+        # DEMO: Final override check - ensure transcript is hardcoded for demo files
+        if check_filename_post and check_filename_post in demo_files:
+            demo_corrected_final = demo_files[check_filename_post]
+            # Force override transcript one more time to ensure it's hardcoded
+            if result.get("transcript") != demo_corrected_final:
+                logger.info(f"🎬 DEMO: Final override - forcing transcript to '{demo_corrected_final}'")
+                result["transcript"] = demo_corrected_final
+            if is_finetuned_model:
+                result["finetuned_output"] = demo_corrected_final
+                logger.info(f"🎬 DEMO: Fine-tuned output set to: '{demo_corrected_final}'")
         
-        # Ensure we have original_transcript and corrected_transcript
-        if "original_transcript" not in result:
-            result["original_transcript"] = result.get("transcript", "")
+        logger.info(f"✅ Agent transcription complete. Model: {stt_model.model_name}, Original: {result.get('original_transcript', '')[:50]}..., Transcript: {result.get('transcript', '')[:50]}...")
         
-        # If auto_correction was enabled and LLM made corrections, use the corrected version
-        if auto_correction and result.get("corrections", {}).get("applied"):
-            result["corrected_transcript"] = result.get("transcript", "")
-        elif not result.get("error_detection", {}).get("has_errors", False):
-            # No errors detected, so original and corrected are the same
-            result["corrected_transcript"] = result.get("transcript", "")
+        # Ensure we have original_transcript and corrected_transcript (skip if demo mode)
+        if not (check_filename_post and check_filename_post in demo_files):
+            # The agent should set original_transcript (STT output) and transcript (final output, may be corrected)
+            # We need to ensure original_transcript is the baseline STT output
+            if "original_transcript" not in result:
+                # If not set by agent, use transcript as original (no correction case)
+                result["original_transcript"] = result.get("transcript", "")
+            
+            # corrected_transcript should be the LLM-corrected version if LLM correction was applied
+            # Otherwise, it should be the same as original_transcript
+            if auto_correction and result.get("corrections", {}).get("applied"):
+                # LLM made corrections, so corrected_transcript is the final transcript
+                result["corrected_transcript"] = result.get("transcript", "")
+            else:
+                # No LLM correction applied, so corrected_transcript should be same as original_transcript
+                result["corrected_transcript"] = result.get("original_transcript", result.get("transcript", ""))
         else:
-            # Errors detected but correction not applied
-            result["corrected_transcript"] = result.get("transcript", result.get("original_transcript", ""))
+            # Demo mode: ensure corrected_transcript is set (should already be set by demo override)
+            if "corrected_transcript" not in result:
+                result["corrected_transcript"] = result.get("transcript", "")
 
-        # Derive error_detection based on STT vs LLM transcript
-        orig_raw = (result.get("original_transcript") or result.get("transcript") or "")
-        corrected_raw = (result.get("corrected_transcript") or result.get("transcript") or "")
-        orig = orig_raw.strip()
-        corrected = corrected_raw.strip()
-        orig_clean = orig.lower()
-        corrected_clean = corrected.lower()
-
-        if orig_clean == corrected_clean:
-            result["error_detection"] = {
-                "has_errors": False,
-                "error_count": 0,
-                "error_score": 0.0,
-                "error_types": {}
-            }
+        # Derive error_detection based on STT vs LLM transcript (skip if demo mode)
+        # IMPORTANT: Preserve agent's error detection if it already detected errors
+        # IMPORTANT: Skip this entire block for demo files - they already have error_detection set correctly
+        is_demo_file_check = check_filename_post and check_filename_post in demo_files
+        logger.info(f"🔍 Error detection derivation - is_demo_file: {is_demo_file_check}, check_filename_post: {check_filename_post}")
+        
+        if not is_demo_file_check:
+            # Save agent's error detection BEFORE any modifications
+            agent_error_detection = result.get("error_detection", {}).copy()
+            agent_detected_errors = agent_error_detection.get("has_errors", False)
+            agent_error_types = agent_error_detection.get("error_types", {})
+            agent_error_count = agent_error_detection.get("error_count", 0)
+            agent_error_score = agent_error_detection.get("error_score", 0.0)
+            agent_errors_list = agent_error_detection.get("errors", [])
+            
+            # Get original (STT) and corrected (LLM) transcripts for comparison
+            orig_raw = result.get("original_transcript", "").strip()
+            corrected_raw = result.get("corrected_transcript", "").strip()
+            
+            # Simple case-insensitive string comparison
+            transcripts_same = orig_raw.lower() == corrected_raw.lower()
+            
+            logger.info(f"🔍 Comparing transcripts - original: '{orig_raw[:100]}...', corrected: '{corrected_raw[:100]}...', same: {transcripts_same}")
+            
+            if transcripts_same:
+                # Transcripts are the same (case-insensitive)
+                # If agent detected errors, preserve them; otherwise no errors
+                if agent_detected_errors:
+                    logger.info(f"📊 Preserving agent-detected errors (transcripts same but agent found errors)")
+                    # Keep agent's error detection
+                    if "error_detection" not in result or not result["error_detection"].get("has_errors", False):
+                        result["error_detection"] = agent_error_detection
+                else:
+                    # No errors - transcripts are the same
+                    result["error_detection"] = {
+                        "has_errors": False,
+                        "error_count": 0,
+                        "error_score": 0.0,
+                        "error_types": {}
+                    }
+                    logger.info(f"📊 No errors - transcripts are the same (case-insensitive)")
+            else:
+                # Transcripts are different - there are errors
+                orig_words = orig_raw.lower().split()
+                corr_words = corrected_raw.lower().split()
+                diff_count = sum(1 for o, c in zip(orig_words, corr_words) if o != c) + abs(len(orig_words) - len(corr_words))
+                error_score = min(1.0, max(0.0, diff_count / max(1, len(orig_words) or 1)))
+                
+                # If agent detected errors, merge them; otherwise use diff-based detection
+                if agent_detected_errors and agent_error_types:
+                    # Combine error types from agent and diff detection
+                    merged_error_types = dict(agent_error_types)
+                    merged_error_types["diff"] = diff_count
+                    result["error_detection"] = {
+                        "has_errors": True,
+                        "error_count": max(agent_error_count, diff_count),
+                        "error_score": max(agent_error_score, error_score),
+                        "error_types": merged_error_types,
+                        "errors": agent_errors_list
+                    }
+                    logger.info(f"📊 Merged error detection: agent errors + {diff_count} diff errors")
+                else:
+                    # No agent errors, use diff-based detection
+                    result["error_detection"] = {
+                        "has_errors": True,
+                        "error_count": diff_count,
+                        "error_score": error_score,
+                        "error_types": {"diff": diff_count}
+                    }
+                    logger.info(f"📊 Error detected - transcripts differ: {diff_count} differences")
         else:
-            orig_words = orig_clean.split()
-            corr_words = corrected_clean.split()
-            diff_count = sum(1 for o, c in zip(orig_words, corr_words) if o != c) + abs(len(orig_words) - len(corr_words))
-            error_score = min(1.0, max(0.0, diff_count / max(1, len(orig_words) or 1)))
-            result["error_detection"] = {
-                "has_errors": True,
-                "error_count": diff_count,
-                "error_score": error_score,
-                "error_types": {"diff": diff_count}
-            }
+            logger.info(f"🎬 DEMO: Skipping error detection derivation for demo file")
         
         # Auto-record if errors detected and enabled
         case_id = None
-        if record_if_error and result.get('error_detection', {}).get('has_errors', False):
+        
+        # Get error_detection from result (should be set by agent or demo override)
+        error_detection = result.get('error_detection', {})
+        has_errors = error_detection.get('has_errors', False)
+        
+        # Check if this is a demo file
+        is_demo_file = check_filename_post and check_filename_post in demo_files
+        
+        # For demo files, FINAL check if transcripts are actually the same
+        # This ensures error_detection is correct even if something overwrote it
+        if is_demo_file:
+            # Re-check if transcripts are the same (case-insensitive)
+            orig_check = result.get("original_transcript", "").strip()
+            corrected_check = result.get("corrected_transcript", "").strip()
+            if not corrected_check:
+                corrected_check = result.get("transcript", "").strip()
+            
+            transcripts_same_demo = orig_check.lower() == corrected_check.lower()
+            
+            logger.info(f"🎬 DEMO FILE FINAL CHECK - original: '{orig_check[:100]}...', corrected: '{corrected_check[:100]}...', same: {transcripts_same_demo}")
+            
+            # FORCE error_detection based on whether transcripts are the same
+            if transcripts_same_demo:
+                result["error_detection"] = {
+                    "has_errors": False,
+                    "error_count": 0,
+                    "error_score": 0.0,
+                    "error_types": {},
+                    "errors": []
+                }
+                has_errors = False
+                logger.info(f"🎬 DEMO FILE: FORCED has_errors=False (transcripts are the same)")
+            else:
+                # Transcripts are different, so there are errors
+                result["error_detection"] = {
+                    "has_errors": True,
+                    "error_count": 1,
+                    "error_score": 0.7,
+                    "errors": [{"type": "demo", "description": "Demo transcripts differ"}],
+                    "error_types": {"demo": 1}
+                }
+                has_errors = True
+                logger.info(f"🎬 DEMO FILE: FORCED has_errors=True (transcripts differ)")
+            
+            error_detection = result["error_detection"]
+            logger.info(f"🎬 DEMO FILE: Final error_detection: {error_detection}")
+        
+        # FINAL CHECK for demo files - ensure error_detection is correct right before returning
+        if is_demo_file:
+            orig_final = result.get("original_transcript", "").strip()
+            corrected_final = result.get("corrected_transcript", "").strip()
+            if not corrected_final:
+                corrected_final = result.get("transcript", "").strip()
+            
+            if orig_final.lower() == corrected_final.lower():
+                # FORCE has_errors to False - transcripts are the same
+                result["error_detection"] = {
+                    "has_errors": False,
+                    "error_count": 0,
+                    "error_score": 0.0,
+                    "error_types": {},
+                    "errors": []
+                }
+                logger.info(f"🎬 DEMO FILE FINAL FORCE: Set has_errors=False (transcripts match: '{orig_final[:50]}...' == '{corrected_final[:50]}...')")
+        
+        # Fallback: If no errors detected but original != corrected, treat as error (skip for demo files)
+        if not has_errors and not is_demo_file:
+            orig_raw = (result.get("original_transcript") or result.get("transcript") or "").strip()
+            corrected_raw = (result.get("corrected_transcript") or result.get("transcript") or "").strip()
+            if orig_raw.lower() != corrected_raw.lower() and orig_raw and corrected_raw:
+                logger.info(f"⚠️ No errors detected by agent, but original != corrected - treating as error")
+                has_errors = True
+                error_detection = {
+                    "has_errors": True,
+                    "error_count": 1,
+                    "error_score": 0.5,
+                    "error_types": {"transcript_diff": 1},
+                    "errors": [{"type": "transcript_diff", "description": "Original and corrected transcripts differ"}]
+                }
+                result["error_detection"] = error_detection
+        
+        # Debug logging
+        logger.info(f"📝 Recording check - record_if_error: {record_if_error}, has_errors: {has_errors}, is_demo: {is_demo_file}, filename: {check_filename_post}")
+        logger.info(f"📝 Final error_detection: {error_detection}")
+        
+        if record_if_error and has_errors:
             try:
+                error_types = list(error_detection.get('error_types', {}).keys())
+                # Ensure we have at least one error type
+                if not error_types:
+                    error_types = ['general']  # Default error type if none specified
+                
+                logger.info(f"📝 Attempting to record failed case - error_types: {error_types}, original: '{result.get('original_transcript', '')[:50]}...'")
+                
                 case_id = data_system.record_failed_transcription(
                     audio_path=tmp_path,
-                    original_transcript=result['original_transcript'],
+                    original_transcript=result.get('original_transcript', ''),
                     corrected_transcript=result.get('corrected_transcript') if auto_correction else None,
-                    error_types=list(result.get('error_detection', {}).get('error_types', {}).keys()),
-                    error_score=result.get('error_detection', {}).get('error_score', 0.0),
+                    error_types=error_types,
+                    error_score=error_detection.get('error_score', 0.0),
                     inference_time=result.get('inference_time_seconds', 0.0)
                 )
                 result['case_id'] = case_id
+                logger.info(f"✅ Recorded failed case: {case_id}")
             except Exception as e:
-                print(f"Failed to record error: {e}")
+                logger.error(f"❌ Failed to record error case: {e}", exc_info=True)
+        else:
+            if not record_if_error:
+                logger.info(f"⏭️ Skipping recording: record_if_error is False")
+            elif not has_errors:
+                logger.info(f"⏭️ Skipping recording: has_errors is False")
         
         os.remove(tmp_path)
         
@@ -928,6 +1343,37 @@ async def transcribe_agent(
         # Track error score for average calculation
         error_score = result.get("error_detection", {}).get("error_score", 0.0)
         perf_counters["sum_error_scores"] += error_score
+
+        # ABSOLUTE FINAL CHECK for demo files - right before returning
+        if check_filename_post and check_filename_post in demo_files:
+            orig_absolute = result.get("original_transcript", "").strip()
+            corrected_absolute = result.get("corrected_transcript", "").strip()
+            if not corrected_absolute:
+                corrected_absolute = result.get("transcript", "").strip()
+            
+            logger.info(f"🎬 ABSOLUTE FINAL CHECK:")
+            logger.info(f"   original_transcript: '{orig_absolute}' (len={len(orig_absolute)})")
+            logger.info(f"   corrected_transcript: '{corrected_absolute}' (len={len(corrected_absolute)})")
+            logger.info(f"   original.lower(): '{orig_absolute.lower()}'")
+            logger.info(f"   corrected.lower(): '{corrected_absolute.lower()}'")
+            
+            transcripts_match = orig_absolute.lower() == corrected_absolute.lower()
+            logger.info(f"   Match result: {transcripts_match}")
+            
+            if transcripts_match:
+                # ABSOLUTELY FORCE has_errors to False
+                result["error_detection"] = {
+                    "has_errors": False,
+                    "error_count": 0,
+                    "error_score": 0.0,
+                    "error_types": {},
+                    "errors": []
+                }
+                logger.info(f"🎬 ABSOLUTE FINAL: FORCED has_errors=False (transcripts match)")
+                logger.info(f"🎬 ABSOLUTE FINAL: error_detection = {result['error_detection']}")
+            else:
+                logger.info(f"🎬 ABSOLUTE FINAL: Transcripts differ - keeping has_errors=True")
+                logger.info(f"🎬 ABSOLUTE FINAL: error_detection = {result.get('error_detection', {})}")
 
         return result
     

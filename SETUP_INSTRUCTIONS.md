@@ -639,7 +639,7 @@ For faster inference, create a GPU-enabled VM:
 
 ```bash
 # Run GPU VM setup script
-bash scripts/setup_gcp_gpu.sh
+bash scripts/gcp_scripts/setup_gcp_gpu.sh
 
 # This creates a VM with:
 # - NVIDIA T4 GPU
@@ -652,7 +652,7 @@ bash scripts/setup_gcp_gpu.sh
 
 ```bash
 # Deploy code to GCP VM
-python scripts/deploy_to_gcp.py
+python scripts/gcp_scripts/deploy_to_gcp.py
 
 # This will:
 # - Copy code to VM
@@ -665,7 +665,7 @@ python scripts/deploy_to_gcp.py
 
 ```bash
 # Check GCP costs and usage
-python scripts/monitor_gcp_costs.py
+python scripts/gcp_scripts/monitor_gcp_costs.py
 
 # Expected output:
 # 📊 GCP Cost Summary
@@ -893,11 +893,13 @@ Once setup is complete:
 ## 📚 Additional Resources
 
 - **[README.md](README.md)** - Project overview and features
-- **[docs/DATA_MANAGEMENT_SYSTEM.md](docs/DATA_MANAGEMENT_SYSTEM.md)** - Complete data management guide
-- **[docs/QUICK_START_DATA_MANAGEMENT.md](docs/QUICK_START_DATA_MANAGEMENT.md)** - Quick start for data management
-- **[docs/GCP_SETUP_GUIDE.md](docs/GCP_SETUP_GUIDE.md)** - Detailed GCP guide
-- **[WEEK1_DELIVERABLES_REPORT.md](WEEK1_DELIVERABLES_REPORT.md)** - Week 1 report
-- **[WEEK2_DELIVERABLES_REPORT.md](WEEK2_DELIVERABLES_REPORT.md)** - Week 2 report
+- **[docs/DATA_MANAGEMENT_GUIDE.md](docs/DATA_MANAGEMENT_GUIDE.md)** - Complete data management guide
+- **[docs/GCP_GUIDE.md](docs/GCP_GUIDE.md)** - Complete GCP setup and deployment guide
+- **[docs/FINETUNING_GUIDE.md](docs/FINETUNING_GUIDE.md)** - Fine-tuning orchestration guide
+- **[docs/WANDB_GUIDE.md](docs/WANDB_GUIDE.md)** - Weights & Biases integration guide
+- **[docs/CONTROL_PANEL_GUIDE.md](docs/CONTROL_PANEL_GUIDE.md)** - Control panel user guide
+- **[docs/WEEK1_DELIVERABLES_REPORT.md](docs/WEEK1_DELIVERABLES_REPORT.md)** - Week 1 report
+- **[docs/WEEK2_DELIVERABLES_REPORT.md](docs/WEEK2_DELIVERABLES_REPORT.md)** - Week 2 report
 
 ---
 

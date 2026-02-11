@@ -149,13 +149,13 @@ gcloud services enable compute.googleapis.com storage-api.googleapis.com
 gsutil mb gs://stt-project-datasets
 
 # Create GPU VM
-bash scripts/setup_gcp_gpu.sh
+bash scripts/gcp_scripts/setup_gcp_gpu.sh
 
 # Deploy to GCP
-python scripts/deploy_to_gcp.py
+python scripts/gcp_scripts/deploy_to_gcp.py
 
 # Monitor costs
-python scripts/monitor_gcp_costs.py
+python scripts/gcp_scripts/monitor_gcp_costs.py
 
 # VM control
 gcloud compute instances stop stt-gpu-vm --zone=us-central1-a

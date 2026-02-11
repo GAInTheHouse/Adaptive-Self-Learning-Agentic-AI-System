@@ -1,0 +1,1 @@
+{"case_id": "ed50ca3916c8", "audio_path": "/var/folders/_g/zgsfg2gs0gn5zzx3rq5dx3nm0000gn/T/tmp_4vesicl.wav", "input_text": "HIS LATRPAR AS USUALLY FORE", "target_text": "His latrpar as usually fore", "error_types": ["diff"], "error_score": 1.0, "metadata": {"inference_time": 0.06948208808898926, "model_confidence": null}, "has_correction": true}

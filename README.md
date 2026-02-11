@@ -101,16 +101,18 @@ Adaptive-Self-Learning-Agentic-AI-System/
 │   └── versions/                 # Dataset versions
 │
 ├── docs/                         # Documentation
-│   ├── DATA_MANAGEMENT_SYSTEM.md # Data management guide
-│   ├── QUICK_START_DATA_MANAGEMENT.md # Quick start
-│   └── GCP_SETUP_GUIDE.md        # GCP setup instructions
+│   ├── DATA_MANAGEMENT_GUIDE.md  # Complete data management guide
+│   ├── FINETUNING_GUIDE.md       # Fine-tuning and orchestration guide
+│   ├── WANDB_GUIDE.md            # Weights & Biases integration guide
+│   ├── CONTROL_PANEL_GUIDE.md    # Control panel user guide
+│   ├── GCP_GUIDE.md              # Complete GCP setup and deployment guide
+│   └── WEEK*_DELIVERABLES_REPORT.md # Weekly deliverable reports
 │
 ├── requirements.txt              # Python dependencies
 ├── README.md                     # This file
 ├── SETUP_INSTRUCTIONS.md         # Detailed setup guide
-├── WEEK1_DELIVERABLES_REPORT.md  # Week 1 completion report
-├── WEEK2_DELIVERABLES_REPORT.md  # Week 2 completion report
-└── docs/DATA_MANAGEMENT_SYSTEM.md # Data management guide
+├── TESTING_GUIDE.md              # Testing guide
+└── QUICK_REFERENCE.md            # Quick reference guide
 ```
 
 ## 🚀 Quick Start
@@ -712,58 +714,54 @@ python experiments/test_api.py
 
 ## ☁️ Google Cloud Platform Integration
 
-### Setup GCP
+For complete GCP setup, deployment, and cost optimization instructions, see **[docs/GCP_GUIDE.md](docs/GCP_GUIDE.md)**.
+
+### Quick Start
 
 ```bash
 # 1. Install gcloud CLI
-curl https://sdk.cloud.google.com | bash
+brew install --cask google-cloud-sdk  # macOS
+# Or: curl https://sdk.cloud.google.com | bash
 
-# 2. Authenticate
+# 2. Authenticate and setup
 gcloud auth login
 gcloud config set project stt-agentic-ai-2025
 
-# 3. Enable APIs
-gcloud services enable compute.googleapis.com
-gcloud services enable storage-api.googleapis.com
+# 3. Create GPU VM
+bash scripts/gcp_scripts/setup_gcp_gpu.sh
 
-# 4. Create storage bucket
-gsutil mb gs://stt-project-datasets
-
-# 5. Verify setup
-bash scripts/quick_setup.sh
+# 4. Deploy to GCP
+python scripts/gcp_scripts/deploy_to_gcp.py
 ```
 
-### Create GPU VM
+### Key Features
+- GPU VM setup for 3-7x faster inference
+- Cloud Run deployment for scalable API
+- GCS integration for data storage
+- Cost monitoring and optimization
+- Automated deployment scripts
 
-```bash
-# Create GPU-enabled VM for faster inference
-bash scripts/setup_gcp_gpu.sh
-```
-
-### Deploy to GCP
-
-```bash
-# Deploy code and run on GCP
-python scripts/deploy_to_gcp.py
-```
-
-### Monitor Costs
-
-```bash
-# Check GCP usage and costs
-python scripts/monitor_gcp_costs.py
-```
+See **[docs/GCP_GUIDE.md](docs/GCP_GUIDE.md)** for detailed instructions on all deployment options, cost optimization strategies, troubleshooting, and security best practices.
 
 ## 📚 Documentation
 
-- **[SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md)** - Detailed setup guide
-- **[docs/DATA_MANAGEMENT_SYSTEM.md](docs/DATA_MANAGEMENT_SYSTEM.md)** - Complete data management guide
-- **[docs/QUICK_START_DATA_MANAGEMENT.md](docs/QUICK_START_DATA_MANAGEMENT.md)** - Quick start for data management
-- **[docs/DATA_MANAGEMENT_SYSTEM.md](docs/DATA_MANAGEMENT_SYSTEM.md)** - Complete data management API
-- **[docs/QUICK_START_DATA_MANAGEMENT.md](docs/QUICK_START_DATA_MANAGEMENT.md)** - Quick start for data management
-- **[docs/GCP_SETUP_GUIDE.md](docs/GCP_SETUP_GUIDE.md)** - GCP setup instructions
-- **[WEEK1_DELIVERABLES_REPORT.md](WEEK1_DELIVERABLES_REPORT.md)** - Week 1 completion report
-- **[WEEK2_DELIVERABLES_REPORT.md](WEEK2_DELIVERABLES_REPORT.md)** - Week 2 completion report
+### Core Documentation
+- **[SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md)** - Complete setup and installation guide
+- **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - Comprehensive testing guide
+- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Quick reference for common tasks
+
+### Feature Guides
+- **[docs/DATA_MANAGEMENT_GUIDE.md](docs/DATA_MANAGEMENT_GUIDE.md)** - Complete data management system guide (failed cases, corrections, fine-tuning datasets)
+- **[docs/FINETUNING_GUIDE.md](docs/FINETUNING_GUIDE.md)** - Fine-tuning orchestration and Wav2Vec2 fine-tuning guide
+- **[docs/WANDB_GUIDE.md](docs/WANDB_GUIDE.md)** - Weights & Biases integration for experiment tracking and hyperparameter sweeps
+- **[docs/CONTROL_PANEL_GUIDE.md](docs/CONTROL_PANEL_GUIDE.md)** - Web-based control panel user guide and API reference
+
+### Deployment & Infrastructure
+- **[docs/GCP_GUIDE.md](docs/GCP_GUIDE.md)** - Complete GCP setup, deployment, and cost optimization guide
+
+### Reports
+- **[docs/WEEK1_DELIVERABLES_REPORT.md](docs/WEEK1_DELIVERABLES_REPORT.md)** - Week 1 completion report
+- **[docs/WEEK2_DELIVERABLES_REPORT.md](docs/WEEK2_DELIVERABLES_REPORT.md)** - Week 2 completion report
 
 ## 📊 Performance Metrics
 

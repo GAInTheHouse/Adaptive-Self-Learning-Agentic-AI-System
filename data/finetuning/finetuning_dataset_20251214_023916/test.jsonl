@@ -1,0 +1,1 @@
+{"case_id": "94613755eefe", "audio_path": "data/production/failed_cases/audio_files/94613755eefe_tmpkngx41ur.wav", "input_text": "IT' A SHAME", "target_text": "It's a shame.", "error_types": ["demo"], "error_score": 0.7, "metadata": {"inference_time": 0.5, "model_confidence": null}, "has_correction": true}

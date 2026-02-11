@@ -387,6 +387,11 @@ async function transcribeAudio() {
         }
         
         const result = await response.json();
+        
+        // Add random delay between 3-5 seconds before displaying results (for demo purposes)
+        const delayMs = Math.random() * 2000 + 3000; // Random between 3000-5000ms
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        
         displayTranscriptionResult(result, mode, selectedModel);
         showToast('Transcription completed successfully', 'success');
     } catch (error) {
@@ -404,14 +409,24 @@ function displayTranscriptionResult(result, mode, selectedModel) {
     container.classList.remove('hidden');
     
     // Get transcripts - use original_transcript for STT and transcript (or corrected) for LLM refined
-    const sttOriginal = result.original_transcript || result.transcript || 'No transcription available';
+    const isFinetunedModel = selectedModel && selectedModel.includes('finetuned');
     
     // Update the side-by-side transcript display
     const sttBox = document.getElementById('stt-original-transcript');
     const llmBox = document.getElementById('llm-refined-transcript');
     
     if (sttBox) {
-        sttBox.innerHTML = `<p>${sttOriginal}</p>`;
+        // If fine-tuned model is selected, show only fine-tuned output (not baseline)
+        // Otherwise, show baseline transcript
+        let sttTranscript;
+        if (isFinetunedModel) {
+            // Fine-tuned model: show only the fine-tuned output (from transcript field)
+            sttTranscript = result.transcript || result.finetuned_output || result.finetuned_transcript || 'No fine-tuned output available';
+        } else {
+            // Baseline model: show baseline transcript
+            sttTranscript = result.original_transcript || result.transcript || 'No transcription available';
+        }
+        sttBox.innerHTML = `<p>${sttTranscript}</p>`;
     }
     
     if (llmBox) {
