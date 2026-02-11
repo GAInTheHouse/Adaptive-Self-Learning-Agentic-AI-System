@@ -27,6 +27,7 @@ checkpoints/
 *.pt
 *.h5
 *.pkl
+*.safetensors
 
 # Credentials
 *.json
