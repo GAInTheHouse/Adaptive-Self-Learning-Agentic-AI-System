@@ -892,10 +892,11 @@ Once setup is complete:
 
 ## 📚 Additional Resources
 
-- **[README.md](README.md)** - Project overview and features
-- **[docs/DATA_MANAGEMENT_SYSTEM.md](docs/DATA_MANAGEMENT_SYSTEM.md)** - Complete data management guide
-- **[docs/QUICK_START_DATA_MANAGEMENT.md](docs/QUICK_START_DATA_MANAGEMENT.md)** - Quick start for data management
-- **[docs/GCP_SETUP_GUIDE.md](docs/GCP_SETUP_GUIDE.md)** - Detailed GCP guide
+- **[README.md](../README.md)** - Project overview
+- **[DATA_MANAGEMENT_SYSTEM.md](DATA_MANAGEMENT_SYSTEM.md)** - Data management
+- **[GCP.md](GCP.md)** - GCP setup & deployment
+- **[FINETUNING.md](FINETUNING.md)** - Fine-tuning guide
+- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Command reference
 
 ---
 

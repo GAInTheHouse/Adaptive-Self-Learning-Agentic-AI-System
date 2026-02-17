@@ -1,5 +1,29 @@
 # Data Management System Documentation
 
+## Quick Start (5 Minutes)
+
+```bash
+pip install -r requirements.txt
+python experiments/test_data_management.py
+```
+
+```python
+from src.data.integration import IntegratedDataManagementSystem
+
+system = IntegratedDataManagementSystem(base_dir="data/quickstart", use_gcs=False)
+case_id = system.record_failed_transcription(
+    audio_path="audio/sample.wav",
+    original_transcript="THIS IS ALL CAPS",
+    corrected_transcript="This is proper text",
+    error_types=["all_caps"],
+    error_score=0.8,
+    inference_time=0.5
+)
+stats = system.get_system_statistics()
+```
+
+---
+
 ## Overview
 
 The Data Management System is a comprehensive solution for managing failed transcription cases, tracking performance metrics, preparing fine-tuning datasets, and maintaining data quality with version control. It is designed to integrate seamlessly with Google Cloud Storage for scalable, production-ready deployments.
