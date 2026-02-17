@@ -36,10 +36,9 @@ gcloud services enable compute.googleapis.com storage-api.googleapis.com
 ```bash
 chmod +x scripts/setup_gcp_gpu.sh
 bash scripts/setup_gcp_gpu.sh
-
-python scripts/deploy_to_gcp.py
-python scripts/monitor_gcp_costs.py
 ```
+
+Edit `scripts/setup_gcp_gpu.sh` to set your `PROJECT_ID` before running.
 
 ### Manual VM Creation
 
@@ -73,20 +72,35 @@ gsutil mb gs://your-project-models
 
 ### Fine-Tuning on GCP
 
-```bash
-python scripts/deploy_finetuning_to_gcp.py \
-  --create-vm --prepare-dataset --run-training \
-  --dataset-id your_dataset_id
-```
+1. **Create a VM** (using `scripts/setup_gcp_gpu.sh` or manual creation above).
+2. **SSH into the VM**:
+   ```bash
+   gcloud compute ssh stt-gpu-vm --zone=us-central1-a
+   ```
+3. **Prepare your dataset** locally and upload to GCS:
+   ```bash
+   gsutil -m cp -r data/processed/your_dataset gs://your-project-datasets/
+   ```
+4. **On the VM**, clone the repo, install dependencies, and run fine-tuning:
+   ```bash
+   git clone <repo-url>
+   cd Adaptive-Self-Learning-Agentic-AI-System
+   pip install -r requirements.txt
+   python scripts/finetune_wav2vec2.py --audio_dir /path/to/audio
+   ```
 
 ---
 
 ## Cost Management
 
 - **T4 + n1-standard-4**: ~$0.54/hour
-- **Preemptible**: Add `--preemptible` for 60-80% savings
-- **Stop VMs**: Always stop when not in use
-- **Alerts**: GCP Console → Billing → Budgets & Alerts
+- **Preemptible**: Add `--preemptible` to VM creation for 60-80% savings
+- **Stop VMs**: Always stop when not in use:
+  ```bash
+  gcloud compute instances stop stt-gpu-vm --zone=us-central1-a
+  ```
+- **Monitor costs**: Use GCP Console → **Billing** → **Cost breakdown** and **Reports**
+- **Set budgets**: GCP Console → **Billing** → **Budgets & alerts** → Create budget
 
 ## Troubleshooting
 

@@ -8,7 +8,9 @@ cd Adaptive-Self-Learning-Agentic-AI-System
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-python scripts/verify_setup.py
+# Verify setup: run tests and optional LLM check
+pytest tests/ -v
+python scripts/test_llm_connection.py  # Optional: if using Ollama for corrections
 ```
 
 ## Running the System
@@ -60,8 +62,7 @@ stats = system.get_system_statistics()
 gcloud auth login
 gcloud config set project your-project-id
 bash scripts/setup_gcp_gpu.sh
-python scripts/deploy_to_gcp.py
-python scripts/monitor_gcp_costs.py
+# Cost monitoring: GCP Console → Billing → Reports & Budgets
 ```
 
 ## Adaptive Scheduling (Week 3)
@@ -94,6 +95,7 @@ results = tester.run_full_test_suite(audio_files, reference_transcripts)
 ## Troubleshooting
 
 ```bash
-python scripts/verify_setup.py
-kill -9 $(lsof -ti:8000)
+pytest tests/ -v  # Verify core dependencies
+python scripts/test_llm_connection.py  # Verify Ollama LLM (if used)
+kill -9 $(lsof -ti:8000)  # Free port 8000
 ```

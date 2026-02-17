@@ -98,17 +98,11 @@ pip install -r requirements.txt
 ### Step 4: Verify Installation
 
 ```bash
-# Run verification script
-python scripts/verify_setup.py
+# Run unit tests to verify core dependencies
+pytest tests/ -v
 
-# Expected output:
-# ✅ Python version: 3.x.x
-# ✅ PyTorch installed: 2.x.x
-# ✅ Transformers installed: 4.x.x
-# ✅ FastAPI installed: 0.x.x
-# ✅ All core dependencies satisfied
-# ✅ GPU available: True/False
-# ✅ CUDA version: 12.x (if GPU available)
+# Optional: If using Ollama for LLM correction, verify LLM connection
+python scripts/test_llm_connection.py
 ```
 
 ### Step 5: Download Model (First Run)
