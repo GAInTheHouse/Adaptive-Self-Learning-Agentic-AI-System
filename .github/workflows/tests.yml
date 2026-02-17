@@ -26,20 +26,38 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        key: ${{ runner.os }}-pip-ci-${{ hashFiles('**/requirements-ci.txt') }}
         restore-keys: |
-          ${{ runner.os }}-pip-
+          ${{ runner.os }}-pip-ci-
+    
+    - name: Free up disk space
+      run: |
+        # Remove unnecessary packages and clean up
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        df -h
     
     - name: Install system dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y ffmpeg libsndfile1
+        sudo apt-get clean
+        sudo rm -rf /var/lib/apt/lists/*
     
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-cov pytest-mock
+        # Use CI requirements with CPU-only PyTorch to save space
+        pip install --no-cache-dir -r requirements-ci.txt
+        pip install --no-cache-dir pytest pytest-cov pytest-mock
+    
+    - name: Clean up pip cache
+      run: |
+        pip cache purge || true
+        df -h
     
     - name: Run unit tests
       run: |
@@ -123,11 +141,27 @@ jobs:
       with:
         python-version: '3.9'
     
+    - name: Free up disk space
+      run: |
+        # Remove unnecessary packages and clean up
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        df -h
+    
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-mock requests
+        # Use CI requirements with CPU-only PyTorch to save space
+        pip install --no-cache-dir -r requirements-ci.txt
+        pip install --no-cache-dir pytest pytest-mock requests
+    
+    - name: Clean up pip cache
+      run: |
+        pip cache purge || true
+        df -h
     
     - name: Start API server in background
       run: |

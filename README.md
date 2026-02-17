@@ -13,6 +13,7 @@ A production-ready, self-improving speech-to-text system with autonomous error d
 - [Development Workflows](#development-workflows)
 - [Testing](#testing)
 - [Documentation](#documentation)
+- [Tutorials](#tutorials)
 
 ## 🎯 Overview
 

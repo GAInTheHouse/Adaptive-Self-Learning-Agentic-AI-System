@@ -87,10 +87,10 @@ class ErrorDataset(Dataset):
         # Process text labels
         with self.processor.as_target_processor():
             label_ids = self.processor(
-            sample['corrected_transcript'],
-            padding=True,
-            return_tensors="pt"
-        )
+                sample['corrected_transcript'],
+                padding=True,
+                return_tensors="pt"
+            )
         
         return {
             'input_values': inputs.input_values.squeeze(0),

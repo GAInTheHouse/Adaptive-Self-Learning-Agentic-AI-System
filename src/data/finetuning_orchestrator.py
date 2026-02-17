@@ -284,7 +284,8 @@ class FinetuningOrchestrator:
         Returns:
             FinetuningJob instance
         """
-        job_id = f"ft_job_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        # Use microseconds to ensure unique job IDs even when created in rapid succession
+        job_id = f"ft_job_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
         
         job = FinetuningJob(
             job_id=job_id,
