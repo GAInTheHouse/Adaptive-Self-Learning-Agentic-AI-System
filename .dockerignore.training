@@ -1,0 +1,73 @@
+# Dockerignore for training container
+# Exclude unnecessary files to reduce image size
+
+# Development files
+.git/
+.gitignore
+*.md
+!README.md
+!docs/**/*.md
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test files (not needed in training container)
+tests/
+experiments_old/
+
+# Frontend (not needed for training)
+frontend/
+
+# API files (not needed for training)
+src/inference_api.py
+src/agent_api.py
+src/control_panel_api.py
+
+# Data files (will be mounted or downloaded)
+data/raw/
+data/processed/
+data/production/
+data/test_audio/
+data/recordings_for_test/
+
+# Output files
+*.log
+*.json
+*.png
+*.jpg
+*.pdf
+!requirements.txt
+!requirements-ci.txt
+
+# Documentation (keep minimal)
+docs/submission/
+*.mp4
+
+# CI/CD
+.github/
+
+# Docker files (except this one)
+Dockerfile
+docker-compose.yml
+cloudbuild.yaml
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
