@@ -5,6 +5,20 @@
 
 ---
 
+## Purpose and Context
+
+This document tracks the **verification process** for quantitative metrics reported in our research paper (`report.md`). The verification process ensures scientific accuracy by:
+
+1. **Cross-referencing reported values** against actual evaluation outputs (JSON files from `experiments/evaluation_outputs/`)
+2. **Identifying discrepancies** between initial estimates and measured values
+3. **Distinguishing verified metrics** (from actual evaluation runs) from **estimated metrics** (theoretical/expected based on component analysis)
+4. **Documenting limitations** (e.g., lack of ground truth data) that prevent full verification
+5. **Providing transparency** about which numbers in the report are measured vs. estimated
+
+**Why This Matters**: In academic/research contexts, distinguishing between verified measurements and theoretical estimates is essential for reproducibility and credibility. This document serves as an audit trail for the evaluation numbers in our report, ensuring readers can trust baseline metrics while understanding where improvements are estimated rather than measured.
+
+---
+
 ## ✅ VERIFIED NUMBERS (From Actual Evaluation Files)
 
 ### Baseline Model Performance

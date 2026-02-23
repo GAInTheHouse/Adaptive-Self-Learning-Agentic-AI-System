@@ -12,6 +12,39 @@ This document describes the Dockerized training environment for the Adaptive Sel
 
 ---
 
+## 🚀 Quick Start
+
+### Build Training Container
+
+```bash
+# Build GPU container (for GCP deployment)
+docker build -f Dockerfile.training -t adaptive-stt-training:latest .
+
+# Build CPU container (for local testing)
+docker build -f Dockerfile.training.cpu -t adaptive-stt-training:cpu .
+```
+
+### Verify Installation
+
+```bash
+# Run verification script
+docker run --rm --gpus all adaptive-stt-training:latest \
+    bash scripts/verify_training_docker.sh
+
+# Or quick test (CPU container)
+docker run --rm adaptive-stt-training:cpu python3 -c \
+    "from peft import LoraConfig; from transformers import Wav2Vec2ForCTC; print('✅ Verified!')"
+```
+
+### Build Status
+
+- **CPU Container**: ✅ Built and verified (`adaptive-stt-training:cpu`, ~3.05GB)
+- **GPU Container**: Ready for GCP deployment (Dockerfile complete)
+
+**Note**: GPU container build may require Docker credential configuration locally. For production, build on GCP where credentials are properly configured.
+
+---
+
 ## Files Created
 
 ### 1. `Dockerfile.training`
