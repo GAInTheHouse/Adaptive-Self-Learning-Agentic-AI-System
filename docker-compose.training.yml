@@ -1,0 +1,46 @@
+# Docker Compose for Training Environment
+# Week 1: Training container with GPU support
+version: '3.8'
+
+services:
+  training:
+    build:
+      context: .
+      dockerfile: Dockerfile.training
+    image: adaptive-stt-training:latest
+    container_name: adaptive-stt-training
+    # GPU support (requires nvidia-docker or Docker with GPU support)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+      - CUDA_VISIBLE_DEVICES=0
+      - WANDB_API_KEY=${WANDB_API_KEY:-}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
+    volumes:
+      # Mount data directory for training data
+      - ./data:/app/data
+      # Mount checkpoints directory for model persistence
+      - ./data/checkpoints:/app/data/checkpoints
+      # Mount models directory for saved models
+      - ./data/models:/app/data/models
+      # Mount logs directory
+      - ./data/logs:/app/data/logs
+      # Mount GCP credentials if available
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-./gcp-credentials.json}:/app/gcp-credentials.json:ro
+    working_dir: /app
+    # Keep container running for interactive use
+    stdin_open: true
+    tty: true
+    networks:
+      - training-network
+
+networks:
+  training-network:
+    driver: bridge
