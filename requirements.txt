@@ -4,7 +4,8 @@ torchvision>=0.15.0
 torchaudio>=2.0.0
 transformers>=4.35.0
 accelerate>=0.24.0
-bitsandbytes>=0.43.0  # For quantization (4-bit and 8-bit support)
+datasets>=2.14.0
+bitsandbytes>=0.40.0  # For quantization (4-bit/8-bit). 0.43+ is Linux-only; use 0.40–0.42 on macOS.
 peft>=0.8.0  # For LoRA fine-tuning
 
 # Bootstrap data pipeline

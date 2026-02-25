@@ -38,7 +38,7 @@ curl "http://localhost:8000/agent/stats"
 python experiments/test_baseline.py
 python experiments/test_agent.py
 python experiments/test_data_management.py
-python experiments/kavya_evaluation_framework.py
+python experiments/run_evaluation.py --eval-set path/to/eval_set.json
 pytest tests/
 ```
 

@@ -228,7 +228,7 @@ def demo_evaluation_framework():
     print_section("DEMO 5: Evaluation Framework")
     
     print("The evaluation framework can be run with:")
-    print("  python experiments/kavya_evaluation_framework.py")
+    print("  python experiments/run_evaluation.py --eval-set path/to/eval_set.json")
     print("\nIt provides:")
     print("  ✅ WER/CER calculation")
     print("  ✅ Error analysis")

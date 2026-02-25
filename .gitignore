@@ -10,6 +10,7 @@ ENV/
 build/
 dist/
 *.egg-info/
+.venv
 
 # Data (never commit large datasets)
 data/raw/*
