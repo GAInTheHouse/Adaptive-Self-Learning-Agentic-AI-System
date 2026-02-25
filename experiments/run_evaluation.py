@@ -263,7 +263,11 @@ def main() -> Dict[str, Any]:
         "model_info": baseline_info,
         **run_model_on_set(baseline, pairs_with_ref, "baseline"),
     }
-    logger.info(f"Baseline WER: {report['baseline']['wer']:.4f}, CER: {report['baseline']['cer']:.4f}")
+    b = report["baseline"]
+    if b.get("wer") is not None and b.get("cer") is not None:
+        logger.info(f"Baseline WER: {b['wer']:.4f}, CER: {b['cer']:.4f}")
+    else:
+        logger.warning("Baseline produced no valid predictions (WER/CER unavailable).")
 
     if not args.baseline_only:
         versions = get_all_model_versions()
@@ -279,7 +283,10 @@ def main() -> Dict[str, Any]:
                 metrics["path"] = model_path
                 metrics["is_current"] = (model_path == current_path)
                 report["improved_models"].append(metrics)
-                logger.info(f"{model_id} WER: {metrics['wer']:.4f}, CER: {metrics['cer']:.4f}")
+                if metrics.get("wer") is not None and metrics.get("cer") is not None:
+                    logger.info(f"{model_id} WER: {metrics['wer']:.4f}, CER: {metrics['cer']:.4f}")
+                else:
+                    logger.warning(f"{model_id}: no valid predictions (WER/CER unavailable).")
             except Exception as e:
                 logger.warning(f"Could not load or run {model_id}: {e}")
 
@@ -297,17 +304,22 @@ def main() -> Dict[str, Any]:
         json.dump(report, f, indent=2, default=str)
     logger.info(f"Report saved to {out_json}")
 
+    b = report["baseline"]
+    wer_str = f"{b['wer']:.4f}" if b.get("wer") is not None else "N/A"
+    cer_str = f"{b['cer']:.4f}" if b.get("cer") is not None else "N/A"
     txt_lines = [
         "=" * 60,
         "EVALUATION REPORT",
         f"Samples: {report['num_samples']}",
         "",
         "Baseline (Whisper)",
-        f"  WER: {report['baseline']['wer']:.4f}  CER: {report['baseline']['cer']:.4f}",
+        f"  WER: {wer_str}  CER: {cer_str}",
         "",
     ]
     for m in report["improved_models"]:
-        txt_lines.append(f"{m['model_id']}  WER: {m['wer']:.4f}  CER: {m['cer']:.4f}")
+        m_wer = f"{m['wer']:.4f}" if m.get("wer") is not None else "N/A"
+        m_cer = f"{m['cer']:.4f}" if m.get("cer") is not None else "N/A"
+        txt_lines.append(f"{m['model_id']}  WER: {m_wer}  CER: {m_cer}")
     txt_lines.append("=" * 60)
     out_txt = output_dir / "evaluation_report.txt"
     with open(out_txt, "w") as f:
