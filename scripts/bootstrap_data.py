@@ -620,7 +620,7 @@ def download_hf_dataset(
                 )
             )
 
-        _write_manifest(rows, manifest_path, force=True if force else True)
+        _write_manifest(rows, manifest_path, force=force)
 
 
 def generate_source_manifests(paths: Dict[str, Path], force: bool) -> None:
