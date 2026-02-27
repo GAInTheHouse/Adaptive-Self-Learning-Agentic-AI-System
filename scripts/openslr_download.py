@@ -31,6 +31,8 @@ OPENSLR_URLS = {
     "dev-other": "https://www.openslr.org/resources/12/dev-other.tar.gz",
     "musan": "https://www.openslr.org/resources/17/musan.tar.gz",
     "rirs_noises": "https://www.openslr.org/resources/28/rirs_noises.zip",
+    "tedlium3": "https://www.openslr.org/resources/51/TEDLIUM_release-3.tgz",
+    "st_aeds": "https://www.openslr.org/resources/45/ST-AEDS-20180100_1-OS.tgz",
 }
 
 
@@ -254,7 +256,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--dataset",
-        choices=["all", "dev-clean", "dev-other", "musan", "rirs_noises"],
+        choices=["all", "dev-clean", "dev-other", "musan", "rirs_noises", "tedlium3", "st_aeds"],
         default="all",
         help="Which dataset to download.",
     )
@@ -276,6 +278,8 @@ def main() -> int:
         "dev-other": args.out_dir / "SLR12_LibriSpeech",
         "musan": args.out_dir / "SLR17_MUSAN",
         "rirs_noises": args.out_dir / "SLR28_RIRS_NOISES",
+        "tedlium3": args.out_dir / "SLR51_TEDLIUM",
+        "st_aeds": args.out_dir / "SLR45_STAEDS",
     }
 
     for name, url in targets:

@@ -53,6 +53,8 @@ OPENSLR_URLS = {
     "librispeech_test_other": "https://www.openslr.org/resources/12/test-other.tar.gz",
     "musan": "https://www.openslr.org/resources/17/musan.tar.gz",
     "rirs_noises": "https://www.openslr.org/resources/28/rirs_noises.zip",
+    "tedlium3": "https://www.openslr.org/resources/51/TEDLIUM_release-3.tgz",
+    "st_aeds": "https://www.openslr.org/resources/45/ST-AEDS-20180100_1-OS.tgz",
 }
 
 HF_DATASETS = {
@@ -104,6 +106,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--all", action="store_true", help="Run every step.")
     parser.add_argument("--download-openslr", action="store_true", help="Download OpenSLR datasets.")
     parser.add_argument("--download-hf", action="store_true", help="Download Hugging Face datasets.")
+    parser.add_argument("--download-primock", action="store_true", help="Download PriMock57 medical consultations.")
+    parser.add_argument("--download-afrimedqa", action="store_true", help="Download AfriMed-QA medical QA dataset.")
     parser.add_argument("--generate-manifests", action="store_true", help="Generate source manifests.")
     parser.add_argument("--derive-low-audio", action="store_true", help="Create 8kHz mono variants.")
     parser.add_argument("--derive-corrupted", action="store_true", help="Create corrupted audio variants.")
@@ -112,6 +116,16 @@ def parse_args() -> argparse.Namespace:
         "--include-librispeech-test",
         action="store_true",
         help="Also download and process LibriSpeech test-clean and test-other.",
+    )
+    parser.add_argument(
+        "--include-tedlium",
+        action="store_true",
+        help="Also download TED-LIUM Release 3 (430h conversational talks).",
+    )
+    parser.add_argument(
+        "--include-st-aeds",
+        action="store_true",
+        help="Also download ST-AEDS spontaneous speech dataset (4.7h).",
     )
     parser.add_argument(
         "--hf-max-samples",
@@ -144,9 +158,13 @@ def ensure_directories(base_dir: Path) -> Dict[str, Path]:
         "openslr_librispeech": base_dir / "openslr" / "SLR12_LibriSpeech",
         "openslr_musan": base_dir / "openslr" / "SLR17_MUSAN",
         "openslr_rirs": base_dir / "openslr" / "SLR28_RIRS_NOISES",
+        "openslr_tedlium": base_dir / "openslr" / "SLR51_TEDLIUM",
+        "openslr_st_aeds": base_dir / "openslr" / "SLR45_STAEDS",
         "hf_root": base_dir / "hf",
         "hf_common_voice": base_dir / "hf" / "common_voice_en",
         "hf_voxpopuli": base_dir / "hf" / "voxpopuli_en",
+        "primock57": base_dir / "primock57",
+        "afrimedqa": base_dir / "afrimedqa",
         "manifests": base_dir / "manifests",
         "derived_root": base_dir / "derived",
         "derived_low_audio": base_dir / "derived" / "low_audio",
@@ -273,7 +291,13 @@ def extract_archive(archive_path: Path, destination_dir: Path, force: bool = Fal
     )
 
 
-def download_openslr(paths: Dict[str, Path], include_librispeech_test: bool, force: bool) -> None:
+def download_openslr(
+    paths: Dict[str, Path],
+    include_librispeech_test: bool,
+    include_tedlium: bool,
+    include_st_aeds: bool,
+    force: bool,
+) -> None:
     downloads = [
         ("librispeech_dev_clean", paths["openslr_librispeech"], paths["openslr_librispeech"] / "LibriSpeech" / "dev-clean"),
         ("librispeech_dev_other", paths["openslr_librispeech"], paths["openslr_librispeech"] / "LibriSpeech" / "dev-other"),
@@ -287,6 +311,10 @@ def download_openslr(paths: Dict[str, Path], include_librispeech_test: bool, for
                 ("librispeech_test_other", paths["openslr_librispeech"], paths["openslr_librispeech"] / "LibriSpeech" / "test-other"),
             ]
         )
+    if include_tedlium:
+        downloads.append(("tedlium3", paths["openslr_tedlium"], paths["openslr_tedlium"] / "TEDLIUM_release-3"))
+    if include_st_aeds:
+        downloads.append(("st_aeds", paths["openslr_st_aeds"], paths["openslr_st_aeds"] / "ST-AEDS-20180100_1-OS"))
 
     for key, extract_dir, expected_path in downloads:
         url = OPENSLR_URLS[key]
@@ -916,10 +944,60 @@ def derive_corrupted_audio(paths: Dict[str, Path], force: bool, seed: int) -> No
         _write_manifest(rows, paths["manifests"] / manifest_name, force=True)
 
 
+def download_primock57(paths: Dict[str, Path], force: bool) -> None:
+    """Download PriMock57 dataset using external script."""
+    LOGGER.info("Downloading PriMock57 medical consultation dataset...")
+    
+    script_path = Path(__file__).parent / "primock_download.py"
+    if not script_path.exists():
+        LOGGER.warning("primock_download.py not found, skipping PriMock57 download")
+        return
+    
+    cmd = [
+        sys.executable,
+        str(script_path),
+        "--out-dir", str(paths["primock57"]),
+        "--manifest-dir", str(paths["manifests"]),
+    ]
+    
+    if force:
+        cmd.append("--force")
+    
+    result = subprocess.run(cmd, check=False)
+    if result.returncode != 0:
+        LOGGER.warning("PriMock57 download failed (check git-lfs installation)")
+
+
+def download_afrimedqa(paths: Dict[str, Path], force: bool) -> None:
+    """Download AfriMed-QA dataset using external script."""
+    LOGGER.info("Downloading AfriMed-QA medical QA dataset...")
+    
+    script_path = Path(__file__).parent / "afrimedqa_download.py"
+    if not script_path.exists():
+        LOGGER.warning("afrimedqa_download.py not found, skipping AfriMed-QA download")
+        return
+    
+    cmd = [
+        sys.executable,
+        str(script_path),
+        "--out-dir", str(paths["afrimedqa"]),
+        "--manifest-dir", str(paths["manifests"]),
+    ]
+    
+    if force:
+        cmd.append("--force")
+    
+    result = subprocess.run(cmd, check=False)
+    if result.returncode != 0:
+        LOGGER.warning("AfriMed-QA download failed")
+
+
 def _resolve_plan(args: argparse.Namespace) -> Dict[str, bool]:
     return {
         "download_openslr": args.all or args.download_openslr,
         "download_hf": args.all or args.download_hf,
+        "download_primock": args.all or args.download_primock,
+        "download_afrimedqa": args.all or args.download_afrimedqa,
         "generate_manifests": args.all or args.generate_manifests,
         "derive_low_audio": args.all or args.derive_low_audio,
         "derive_corrupted": args.all or args.derive_corrupted,
@@ -938,6 +1016,8 @@ def main() -> int:
             args.all,
             args.download_openslr,
             args.download_hf,
+            args.download_primock,
+            args.download_afrimedqa,
             args.generate_manifests,
             args.derive_low_audio,
             args.derive_corrupted,
@@ -961,6 +1041,8 @@ def main() -> int:
         download_openslr(
             paths=paths,
             include_librispeech_test=args.include_librispeech_test,
+            include_tedlium=args.include_tedlium,
+            include_st_aeds=args.include_st_aeds,
             force=args.force,
         )
 
@@ -978,6 +1060,12 @@ def main() -> int:
             force=args.force,
             max_samples_per_split=args.hf_max_samples,
         )
+
+    if plan["download_primock"]:
+        download_primock57(paths=paths, force=args.force)
+
+    if plan["download_afrimedqa"]:
+        download_afrimedqa(paths=paths, force=args.force)
 
     if plan["generate_manifests"]:
         generate_source_manifests(paths=paths, force=args.force)
