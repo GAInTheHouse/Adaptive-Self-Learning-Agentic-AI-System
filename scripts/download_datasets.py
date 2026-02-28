@@ -1,5 +1,26 @@
 #!/usr/bin/env python3
 """
+??  DEPRECATED - Use new modular pipeline instead
+
+This script is deprecated as of February 2026 (gxa/create-data branch).
+
+REPLACEMENT SCRIPTS:
+- For HF dataset downloads: scripts/hf_download.py
+- For orchestrated workflow: scripts/bootstrap_data.py --download-hf
+- For OpenSLR datasets: scripts/openslr_download.py
+
+NEW FEATURES IN REPLACEMENT:
+- Generic HF dataset support (not limited to 3 hardcoded datasets)
+- Standardized CSV manifest generation
+- Audio materialization to WAV format
+- Resume support with checksums
+- No GCS dependency (can run locally)
+
+MIGRATION GUIDE: See scripts/MIGRATION_GUIDE.md
+
+---
+
+ORIGINAL DESCRIPTION:
 Download and curate STT datasets focusing on difficult cases.
 Automatically uploads to Google Cloud Storage.
 """

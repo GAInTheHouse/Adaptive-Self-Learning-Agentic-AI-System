@@ -1,5 +1,27 @@
 #!/usr/bin/env python3
 """
+DEPRECATED - Use new modular pipeline instead
+
+This script is deprecated as of February 2026 (gxa/create-data branch).
+
+REPLACEMENT SCRIPTS:
+- For audio augmentation: scripts/augment_audio.py
+- For low-quality variants: scripts/bootstrap_data.py --derive-low-audio
+- For corrupted variants: scripts/bootstrap_data.py --derive-corrupted
+- For evaluation splits: Use src.data.evaluation_splits module directly
+
+NEW FEATURES IN REPLACEMENT:
+- MUSAN noise corpus integration
+- RIRS room impulse responses for reverb
+- Random SNR levels, dropouts, clipping
+- Configurable augmentation parameters
+- No GCS dependency (runs locally)
+
+MIGRATION GUIDE: See scripts/MIGRATION_GUIDE.md
+
+---
+
+ORIGINAL DESCRIPTION:
 Preprocessing script for STT datasets.
 Downloads from GCS, preprocesses, and uploads results back.
 """
