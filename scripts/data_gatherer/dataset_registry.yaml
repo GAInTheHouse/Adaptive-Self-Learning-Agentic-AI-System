@@ -1,0 +1,118 @@
+version: "1.0"
+last_updated: "2026-02-27"
+description: "Central registry for all speech and text datasets used in the STT pipeline"
+
+# Hugging Face Datasets
+huggingface:
+  common_voice_16_1:
+    dataset: "mozilla-foundation/common_voice_16_1"
+    config: "en"
+    splits: ["train", "validation", "test"]
+    description: "Common Voice 16.1 - Legacy version from old pipeline"
+    text_only: false
+    quality_filter: true
+    
+  common_voice_17_0:
+    dataset: "mozilla-foundation/common_voice_17_0"
+    config: "en"
+    splits: ["train", "validation", "test"]
+    description: "Common Voice 17.0 - Current version"
+    text_only: false
+    quality_filter: false
+    
+  librispeech_asr:
+    dataset: "librispeech_asr"
+    config: "clean"
+    splits: ["test.clean"]
+    description: "LibriSpeech via HF API (alternative to OpenSLR)"
+    text_only: false
+    
+  speech_commands:
+    dataset: "speech_commands"
+    config: "v0.02"
+    splits: ["train", "validation", "test"]
+    description: "Speech Commands v0.02 - Keyword spotting"
+    text_only: false
+    
+  voxpopuli:
+    dataset: "facebook/voxpopuli"
+    config: "en"
+    splits: ["train", "validation", "test"]
+    description: "VoxPopuli English - European Parliament speeches"
+    text_only: false
+    
+  afrimedqa:
+    dataset: "afrimedqa/afrimedqa_v2"
+    config: null
+    splits: ["train", "test"]
+    description: "AfriMed-QA Medical QA (text-only, 15K questions)"
+    text_only: true
+
+# OpenSLR Datasets
+openslr:
+  librispeech_dev_clean:
+    resource_id: 12
+    url: "https://www.openslr.org/resources/12/dev-clean.tar.gz"
+    description: "LibriSpeech dev-clean - Read audiobooks"
+    extract_path: "LibriSpeech/dev-clean"
+    dataset_type: "librispeech"
+    
+  librispeech_dev_other:
+    resource_id: 12
+    url: "https://www.openslr.org/resources/12/dev-other.tar.gz"
+    description: "LibriSpeech dev-other - Challenging audiobooks"
+    extract_path: "LibriSpeech/dev-other"
+    dataset_type: "librispeech"
+    
+  librispeech_test_clean:
+    resource_id: 12
+    url: "https://www.openslr.org/resources/12/test-clean.tar.gz"
+    description: "LibriSpeech test-clean - Test set audiobooks"
+    extract_path: "LibriSpeech/test-clean"
+    dataset_type: "librispeech"
+    
+  librispeech_test_other:
+    resource_id: 12
+    url: "https://www.openslr.org/resources/12/test-other.tar.gz"
+    description: "LibriSpeech test-other - Challenging test set"
+    extract_path: "LibriSpeech/test-other"
+    dataset_type: "librispeech"
+    
+  musan:
+    resource_id: 17
+    url: "https://www.openslr.org/resources/17/musan.tar.gz"
+    description: "MUSAN noise corpus - Music, speech, and noise for augmentation"
+    extract_path: "musan"
+    dataset_type: "musan"
+    
+  rirs_noises:
+    resource_id: 28
+    url: "https://www.openslr.org/resources/28/rirs_noises.zip"
+    description: "Room Impulse Response and Noise Database"
+    extract_path: "RIRS_NOISES"
+    dataset_type: "rirs"
+    
+  tedlium3:
+    resource_id: 51
+    url: "https://www.openslr.org/resources/51/TEDLIUM_release-3.tgz"
+    description: "TED-LIUM Release 3 - 430h conversational talks"
+    extract_path: "TEDLIUM_release-3"
+    dataset_type: "tedlium"
+    
+  st_aeds:
+    resource_id: 45
+    url: "https://www.openslr.org/resources/45/ST-AEDS-20180100_1-OS.tgz"
+    description: "ST-AEDS spontaneous speech - 4.7h of spontaneous dialogue"
+    extract_path: "ST-AEDS-20180100_1-OS"
+    dataset_type: "st_aeds"
+
+# Git Repositories (with LFS support)
+git:
+  primock57:
+    url: "https://github.com/babylonhealth/primock57.git"
+    requires_lfs: true
+    description: "PriMock57 medical consultations - 57 UK medical consultation samples"
+    audio_dir: "audio"
+    transcripts_dir: "transcripts"
+    notes_dir: "notes"
+    dataset_type: "primock57"
