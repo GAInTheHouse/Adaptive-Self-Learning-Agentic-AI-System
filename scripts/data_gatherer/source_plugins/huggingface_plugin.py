@@ -92,17 +92,59 @@ class HuggingFacePlugin(DataSourcePlugin):
         
         # Load dataset
         try:
-            dataset = load_dataset(
-                dataset_name,
-                name=dataset_config,
-                cache_dir=str(output_dir.parent / ".hf_cache"),
-            )
+            # region agent log
+            import json
+            from pathlib import Path as LogPath
+            log_data = {"hypothesisId": "A", "runId": "debug1", "location": "huggingface_plugin.py:92", "message": "Attempting HF load", "data": {"dataset_name": dataset_name, "config": dataset_config, "splits": splits}, "timestamp": int(__import__('time').time() * 1000)}
+            try:
+                with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                    f.write(json.dumps(log_data) + '\n')
+            except: pass
+            # endregion
+            
+            # Try with trust_remote_code for Speech Commands
+            load_kwargs = {
+                "name": dataset_config,
+                "cache_dir": str(output_dir.parent / ".hf_cache"),
+            }
+            
+            # Hypothesis C: Speech Commands needs trust_remote_code
+            if "speech_commands" in dataset_name.lower():
+                load_kwargs["trust_remote_code"] = True
+                
+            dataset = load_dataset(dataset_name, **load_kwargs)
+            
+            # region agent log
+            log_data2 = {"hypothesisId": "A,B", "runId": "debug1", "location": "huggingface_plugin.py:110", "message": "HF load success", "data": {"dataset_name": dataset_name, "available_splits": list(dataset.keys()) if hasattr(dataset, 'keys') else []}, "timestamp": int(__import__('time').time() * 1000)}
+            try:
+                with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                    f.write(json.dumps(log_data2) + '\n')
+            except: pass
+            # endregion
+            
         except Exception as exc:
+            # region agent log
+            log_data3 = {"hypothesisId": "A,B,C", "runId": "debug1", "location": "huggingface_plugin.py:121", "message": "HF load failed", "data": {"dataset_name": dataset_name, "error_type": type(exc).__name__, "error_msg": str(exc)}, "timestamp": int(__import__('time').time() * 1000)}
+            try:
+                with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                    f.write(json.dumps(log_data3) + '\n')
+            except: pass
+            # endregion
+            
             self.logger.error("Failed to load dataset %s: %s", dataset_name, exc)
             return None
         
         # Process each split
         for split_name in splits:
+            # region agent log
+            import json
+            log_data = {"hypothesisId": "B", "runId": "debug1", "location": "huggingface_plugin.py:137", "message": "Checking split", "data": {"split_name": split_name, "available_splits": list(dataset.keys()), "split_exists": split_name in dataset}, "timestamp": int(__import__('time').time() * 1000)}
+            try:
+                with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                    f.write(json.dumps(log_data) + '\n')
+            except: pass
+            # endregion
+            
             if split_name not in dataset:
                 self.logger.warning("Split '%s' not found in dataset", split_name)
                 continue
@@ -122,6 +164,16 @@ class HuggingFacePlugin(DataSourcePlugin):
             # Handle audio datasets
             if not text_only:
                 audio_col = self._detect_audio_column(split_ds)
+                
+                # region agent log
+                import json
+                log_data = {"hypothesisId": "E", "runId": "debug1", "location": "huggingface_plugin.py:157", "message": "Audio column detection", "data": {"dataset_name": dataset_name, "split_name": split_name, "audio_col": audio_col, "columns": list(split_ds.column_names)[:10]}, "timestamp": int(__import__('time').time() * 1000)}
+                try:
+                    with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                        f.write(json.dumps(log_data) + '\n')
+                except: pass
+                # endregion
+                
                 if audio_col:
                     try:
                         split_ds = split_ds.cast_column(audio_col, Audio(decode=True))

@@ -104,6 +104,27 @@ class OpenSLRPlugin(DataSourcePlugin):
         """Infer dataset type from name or directory structure."""
         name_lower = dataset_name.lower()
         
+        # region agent log
+        import json
+        inferred = "unknown"
+        if "librispeech" in name_lower:
+            inferred = "librispeech"
+        elif "musan" in name_lower:
+            inferred = "musan"
+        elif "rirs" in name_lower or "noises" in name_lower:
+            inferred = "rirs"
+        elif "tedlium" in name_lower:
+            inferred = "tedlium"
+        elif "aeds" in name_lower:
+            inferred = "st_aeds"
+        
+        log_data = {"hypothesisId": "F", "runId": "debug1", "location": "openslr_plugin.py:115", "message": "Dataset type inference", "data": {"dataset_name": dataset_name, "inferred_type": inferred, "data_dir": str(data_dir)}, "timestamp": int(__import__('time').time() * 1000)}
+        try:
+            with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                f.write(json.dumps(log_data) + '\n')
+        except: pass
+        # endregion
+        
         if "librispeech" in name_lower:
             return "librispeech"
         elif "musan" in name_lower:
@@ -167,7 +188,16 @@ class OpenSLRPlugin(DataSourcePlugin):
         
         try:
             content_length, supports_range = self._head(url)
-        except Exception:
+        except Exception as head_exc:
+            # region agent log
+            import json
+            log_data = {"hypothesisId": "D", "runId": "debug1", "location": "openslr_plugin.py:169", "message": "HEAD request failed", "data": {"url": url, "error_type": type(head_exc).__name__, "error_msg": str(head_exc)}, "timestamp": int(__import__('time').time() * 1000)}
+            try:
+                with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                    f.write(json.dumps(log_data) + '\n')
+            except: pass
+            # endregion
+            
             self.logger.warning("HEAD request failed for %s", url)
         
         # Check if already complete
