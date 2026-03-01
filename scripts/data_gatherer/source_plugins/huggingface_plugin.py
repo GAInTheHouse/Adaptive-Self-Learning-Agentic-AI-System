@@ -102,17 +102,11 @@ class HuggingFacePlugin(DataSourcePlugin):
             except: pass
             # endregion
             
-            # Try with trust_remote_code for Speech Commands
-            load_kwargs = {
-                "name": dataset_config,
-                "cache_dir": str(output_dir.parent / ".hf_cache"),
-            }
-            
-            # Hypothesis C: Speech Commands needs trust_remote_code
-            if "speech_commands" in dataset_name.lower():
-                load_kwargs["trust_remote_code"] = True
-                
-            dataset = load_dataset(dataset_name, **load_kwargs)
+            dataset = load_dataset(
+                dataset_name,
+                name=dataset_config,
+                cache_dir=str(output_dir.parent / ".hf_cache"),
+            )
             
             # region agent log
             log_data2 = {"hypothesisId": "A,B", "runId": "debug1", "location": "huggingface_plugin.py:110", "message": "HF load success", "data": {"dataset_name": dataset_name, "available_splits": list(dataset.keys()) if hasattr(dataset, 'keys') else []}, "timestamp": int(__import__('time').time() * 1000)}
@@ -187,6 +181,15 @@ class HuggingFacePlugin(DataSourcePlugin):
             split_slug = safe_name(split_name)
             split_output = output_dir / split_slug
             
+            # region agent log
+            import json
+            log_data = {"hypothesisId": "E", "runId": "debug1", "location": "huggingface_plugin.py:181", "message": "Before save", "data": {"split_name": split_name, "split_output": str(split_output), "exists": split_output.exists(), "force": force, "num_examples": len(split_ds)}, "timestamp": int(__import__('time').time() * 1000)}
+            try:
+                with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                    f.write(json.dumps(log_data) + '\n')
+            except: pass
+            # endregion
+            
             if split_output.exists() and not force:
                 self.logger.info("Split already saved: %s", split_output)
                 continue
@@ -195,8 +198,30 @@ class HuggingFacePlugin(DataSourcePlugin):
                 shutil.rmtree(split_output)
             
             split_output.parent.mkdir(parents=True, exist_ok=True)
-            split_ds.save_to_disk(str(split_output))
-            self.logger.info("Saved split '%s' to: %s", split_name, split_output)
+            
+            try:
+                split_ds.save_to_disk(str(split_output))
+                self.logger.info("Saved split '%s' to: %s", split_name, split_output)
+                
+                # region agent log
+                import os
+                saved_files = list(split_output.glob("*")) if split_output.exists() else []
+                log_data2 = {"hypothesisId": "E", "runId": "debug1", "location": "huggingface_plugin.py:203", "message": "After save", "data": {"split_name": split_name, "split_output": str(split_output), "saved_files_count": len(saved_files), "has_arrow_files": any(f.suffix == '.arrow' for f in saved_files)}, "timestamp": int(__import__('time').time() * 1000)}
+                try:
+                    with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                        f.write(json.dumps(log_data2) + '\n')
+                except: pass
+                # endregion
+                
+            except Exception as save_exc:
+                # region agent log
+                log_data3 = {"hypothesisId": "E", "runId": "debug1", "location": "huggingface_plugin.py:214", "message": "Save failed", "data": {"split_name": split_name, "error_type": type(save_exc).__name__, "error_msg": str(save_exc)}, "timestamp": int(__import__('time').time() * 1000)}
+                try:
+                    with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                        f.write(json.dumps(log_data3) + '\n')
+                except: pass
+                # endregion
+                raise
         
         return output_dir
     
@@ -219,12 +244,48 @@ class HuggingFacePlugin(DataSourcePlugin):
         # Find all saved splits
         split_dirs = [d for d in data_dir.iterdir() if d.is_dir() and not d.name.startswith(".")]
         
+        # region agent log
+        import json
+        log_data = {"hypothesisId": "E", "runId": "debug1", "location": "huggingface_plugin.py:244", "message": "Manifest gen start", "data": {"data_dir": str(data_dir), "split_dirs_found": [str(d) for d in split_dirs]}, "timestamp": int(__import__('time').time() * 1000)}
+        try:
+            with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                f.write(json.dumps(log_data) + '\n')
+        except: pass
+        # endregion
+        
         for split_dir in split_dirs:
             split_name = split_dir.name
             
+            # region agent log
+            import os
+            files_in_split = list(split_dir.glob("*")) if split_dir.exists() else []
+            log_data2 = {"hypothesisId": "E", "runId": "debug1", "location": "huggingface_plugin.py:257", "message": "Attempting load", "data": {"split_name": split_name, "split_dir": str(split_dir), "exists": split_dir.exists(), "files_count": len(files_in_split), "has_arrow": any(f.suffix == '.arrow' for f in files_in_split)}, "timestamp": int(__import__('time').time() * 1000)}
+            try:
+                with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                    f.write(json.dumps(log_data2) + '\n')
+            except: pass
+            # endregion
+            
             try:
                 split_ds = load_from_disk(str(split_dir))
+                
+                # region agent log
+                log_data3 = {"hypothesisId": "E", "runId": "debug1", "location": "huggingface_plugin.py:270", "message": "Load success", "data": {"split_name": split_name, "num_examples": len(split_ds)}, "timestamp": int(__import__('time').time() * 1000)}
+                try:
+                    with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                        f.write(json.dumps(log_data3) + '\n')
+                except: pass
+                # endregion
+                
             except Exception as exc:
+                # region agent log
+                log_data4 = {"hypothesisId": "E", "runId": "debug1", "location": "huggingface_plugin.py:280", "message": "Load failed", "data": {"split_name": split_name, "error_type": type(exc).__name__, "error_msg": str(exc)[:200]}, "timestamp": int(__import__('time').time() * 1000)}
+                try:
+                    with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                        f.write(json.dumps(log_data4) + '\n')
+                except: pass
+                # endregion
+                
                 self.logger.warning("Failed to load split %s: %s", split_name, exc)
                 continue
             

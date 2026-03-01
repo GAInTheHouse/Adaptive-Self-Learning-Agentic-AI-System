@@ -4,35 +4,18 @@ description: "Central registry for all speech and text datasets used in the STT 
 
 # Hugging Face Datasets
 huggingface:
-  common_voice_16_1:
-    dataset: "mozilla-foundation/common_voice_16_1"
-    config: "en"
-    splits: ["train", "validation", "test"]
-    description: "Common Voice 16.1 - Legacy version from old pipeline"
-    text_only: false
-    quality_filter: true
-    
-  common_voice_17_0:
-    dataset: "mozilla-foundation/common_voice_17_0"
-    config: "en"
-    splits: ["train", "validation", "test"]
-    description: "Common Voice 17.0 - Current version"
-    text_only: false
-    quality_filter: false
-    
+  # NOTE: Common Voice datasets removed - they don't exist or have no data files on HF Hub
+  # - common_voice_16_1: DatasetNotFoundError
+  # - common_voice_17_0: EmptyDatasetError
+  
   librispeech_asr:
     dataset: "librispeech_asr"
     config: "clean"
-    splits: ["test.clean"]
+    splits: ["test", "train.100", "train.360", "validation"]
     description: "LibriSpeech via HF API (alternative to OpenSLR)"
     text_only: false
     
-  speech_commands:
-    dataset: "speech_commands"
-    config: "v0.02"
-    splits: ["train", "validation", "test"]
-    description: "Speech Commands v0.02 - Keyword spotting"
-    text_only: false
+  # NOTE: speech_commands removed - dataset scripts are no longer supported by HuggingFace
     
   voxpopuli:
     dataset: "facebook/voxpopuli"
@@ -92,12 +75,13 @@ openslr:
     extract_path: "RIRS_NOISES"
     dataset_type: "rirs"
     
-  tedlium3:
-    resource_id: 51
-    url: "https://www.openslr.org/resources/51/TEDLIUM_release-3.tgz"
-    description: "TED-LIUM Release 3 - 430h conversational talks"
-    extract_path: "TEDLIUM_release-3"
-    dataset_type: "tedlium"
+  # NOTE: tedlium3 URL returns 404 - dataset may have been moved or removed
+  # tedlium3:
+  #   resource_id: 51
+  #   url: "https://www.openslr.org/resources/51/TEDLIUM_release-3.tgz"
+  #   description: "TED-LIUM Release 3 - 430h conversational talks"
+  #   extract_path: "TEDLIUM_release-3"
+  #   dataset_type: "tedlium"
     
   st_aeds:
     resource_id: 45
@@ -105,6 +89,8 @@ openslr:
     description: "ST-AEDS spontaneous speech - 4.7h of spontaneous dialogue"
     extract_path: "ST-AEDS-20180100_1-OS"
     dataset_type: "st_aeds"
+    # NOTE: Downloads successfully but no manifest generator implemented yet
+    # Dataset will download but not generate manifests until generator is added
 
 # Git Repositories (with LFS support)
 git:
@@ -116,3 +102,6 @@ git:
     transcripts_dir: "transcripts"
     notes_dir: "notes"
     dataset_type: "primock57"
+    # NOTE: Requires git-lfs to be installed:
+    #   macOS: brew install git-lfs && git lfs install
+    #   Ubuntu: sudo apt install git-lfs && git lfs install
