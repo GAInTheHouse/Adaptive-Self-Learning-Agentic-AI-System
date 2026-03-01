@@ -16,7 +16,7 @@ The data pipeline has been redesigned in the `gxa/create-data` branch with a mod
 
 | Old Script | Old Command | New Replacement | New Command |
 |------------|-------------|-----------------|-------------|
-| `download_datasets.py` | `python scripts/download_datasets.py` | `hf_download.py` | `python scripts/hf_download.py --dataset mozilla-foundation/common_voice_17_0 --config en` |
+| `download_datasets.py` | `python scripts/download_datasets.py` | `hf_download.py` | `python scripts/hf_download.py --dataset fsicoli/common_voice_17_0 --config en` |
 | `download_datasets.py` | (automatic GCS upload) | `bootstrap_data.py` | `python scripts/bootstrap_data.py --download-hf` |
 | `preprocess_data.py` | `python scripts/preprocess_data.py` | `augment_audio.py` | `python scripts/augment_audio.py --input-dir data/raw --output-dir data/augmented` |
 | `preprocess_data.py` | (audio variants) | `bootstrap_data.py` | `python scripts/bootstrap_data.py --derive-low-audio --derive-corrupted` |
@@ -43,7 +43,7 @@ python scripts/download_datasets.py
 ```bash
 # Generic, configurable, any HF dataset
 python scripts/hf_download.py \
-    --dataset mozilla-foundation/common_voice_17_0 \
+    --dataset fsicoli/common_voice_17_0 \
     --config en \
     --split train \
     --max-samples 5000 \
@@ -54,9 +54,9 @@ python scripts/hf_download.py \
 ```
 
 **Output:**
-- `data/hf_saved/mozilla-foundation__common_voice_17_0__en/train/` (HF format)
-- `data/hf_audio/mozilla-foundation__common_voice_17_0__en/train/*.wav` (materialized audio)
-- `data/manifests/mozilla-foundation__common_voice_17_0__en__train.csv` (standardized manifest)
+- `data/hf_saved/fsicoli__common_voice_17_0__en/train/` (HF format)
+- `data/hf_audio/fsicoli__common_voice_17_0__en/train/*.wav` (materialized audio)
+- `data/manifests/fsicoli__common_voice_17_0__en__train.csv` (standardized manifest)
 
 **Key Differences:**
 - ✓ Not limited to 3 datasets
@@ -155,9 +155,9 @@ python scripts/bootstrap_data.py --derive-corrupted     # MUSAN + RIRS augmentat
 
 | Feature | Old Location | New Location | Notes |
 |---------|-------------|--------------|-------|
-| Common Voice download | `download_datasets.py` | `hf_download.py --dataset mozilla-foundation/common_voice_17_0` | Now version 17.0, fully configurable |
+| Common Voice download | `download_datasets.py` | `hf_download.py --dataset fsicoli/common_voice_17_0` | Now version 17.0, fully configurable (community mirror) |
 | LibriSpeech download | `download_datasets.py` (via HF) | `openslr_download.py --dataset dev-clean` | Direct from OpenSLR, faster |
-| Speech Commands | `download_datasets.py` | `hf_download.py --dataset speech_commands` | Generic HF support |
+| Speech Commands | `download_datasets.py` | `hf_download.py --dataset google/speech_commands` | Generic HF support (official identifier) |
 | Quality filtering | `download_datasets.py` (upvotes/downvotes) | **NOT MIGRATED** | Add to hf_download.py if needed |
 | Accent filtering | `download_datasets.py` | **NOT MIGRATED** | Filter after download |
 | Domain vocabulary | `download_datasets.py` | **NOT MIGRATED** | May not be needed |
@@ -407,7 +407,7 @@ gcs_manager.upload_directory(str(local_path), f"raw/{dataset_name}")
 from datasets import load_dataset
 
 dataset = load_dataset(
-    "mozilla-foundation/common_voice_17_0",
+    "fsicoli/common_voice_17_0",
     "en",
     split="train",
 )
@@ -493,9 +493,9 @@ data/evaluation/common_voice_accents/
 
 **New:**
 ```
-data/hf_audio/mozilla-foundation__common_voice_17_0__en/train/
-data/manifests/mozilla-foundation__common_voice_17_0__en__train.csv
-data/derived/corrupted/mozilla-foundation__common_voice_17_0__en/train/
+data/hf_audio/fsicoli__common_voice_17_0__en/train/
+data/manifests/fsicoli__common_voice_17_0__en__train.csv
+data/derived/corrupted/fsicoli__common_voice_17_0__en/train/
 ```
 
 **Impact:** Training scripts need updated paths  
@@ -536,7 +536,7 @@ python scripts/download_datasets.py 2>&1 | head -30
 ```bash
 # Download subset of Common Voice
 python scripts/hf_download.py \
-    --dataset mozilla-foundation/common_voice_17_0 \
+    --dataset fsicoli/common_voice_17_0 \
     --config en \
     --split validation \
     --max-samples 100 \
@@ -544,8 +544,8 @@ python scripts/hf_download.py \
 
 # Verify output
 ls -lh data/manifests/
-ls -lh data/hf_audio/mozilla-foundation__common_voice_17_0__en/validation/
-cat data/manifests/mozilla-foundation__common_voice_17_0__en__validation.csv | head
+ls -lh data/hf_audio/fsicoli__common_voice_17_0__en/validation/
+cat data/manifests/fsicoli__common_voice_17_0__en__validation.csv | head
 ```
 
 ### Compare Outputs
@@ -557,7 +557,7 @@ import pandas as pd
 # old_meta = json.load(open("data/raw/common_voice_accents/metadata.json"))
 
 # New manifest
-new_manifest = pd.read_csv("data/manifests/mozilla-foundation__common_voice_17_0__en__validation.csv")
+new_manifest = pd.read_csv("data/manifests/fsicoli__common_voice_17_0__en__validation.csv")
 
 print(f"New manifest samples: {len(new_manifest)}")
 print(f"Columns: {list(new_manifest.columns)}")

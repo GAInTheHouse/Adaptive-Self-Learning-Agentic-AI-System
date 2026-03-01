@@ -4,9 +4,14 @@ description: "Central registry for all speech and text datasets used in the STT 
 
 # Hugging Face Datasets
 huggingface:
-  # NOTE: Common Voice datasets removed - they don't exist or have no data files on HF Hub
-  # - common_voice_16_1: DatasetNotFoundError
-  # - common_voice_17_0: EmptyDatasetError
+  # Community mirror (original mozilla-foundation dataset removed from HF Hub)
+  common_voice_17_0:
+    dataset: "fsicoli/common_voice_17_0"
+    config: "en"
+    splits: ["train", "validation", "test"]
+    description: "Common Voice 17.0 - Current version (community mirror)"
+    text_only: false
+    quality_filter: false
   
   librispeech_asr:
     dataset: "librispeech_asr"
@@ -15,7 +20,12 @@ huggingface:
     description: "LibriSpeech via HF API (alternative to OpenSLR)"
     text_only: false
     
-  # NOTE: speech_commands removed - dataset scripts are no longer supported by HuggingFace
+  speech_commands:
+    dataset: "google/speech_commands"
+    config: "v0.02"
+    splits: ["train", "validation", "test"]
+    description: "Speech Commands v0.02 - Keyword spotting"
+    text_only: false
     
   voxpopuli:
     dataset: "facebook/voxpopuli"
@@ -75,13 +85,12 @@ openslr:
     extract_path: "RIRS_NOISES"
     dataset_type: "rirs"
     
-  # NOTE: tedlium3 URL returns 404 - dataset may have been moved or removed
-  # tedlium3:
-  #   resource_id: 51
-  #   url: "https://www.openslr.org/resources/51/TEDLIUM_release-3.tgz"
-  #   description: "TED-LIUM Release 3 - 430h conversational talks"
-  #   extract_path: "TEDLIUM_release-3"
-  #   dataset_type: "tedlium"
+  tedlium3:
+    resource_id: 51
+    url: "http://www.openslr.org/resources/51/TEDLIUM_release-3.tgz"
+    description: "TED-LIUM Release 3 - 430h conversational talks"
+    extract_path: "TEDLIUM_release-3"
+    dataset_type: "tedlium"
     
   st_aeds:
     resource_id: 45

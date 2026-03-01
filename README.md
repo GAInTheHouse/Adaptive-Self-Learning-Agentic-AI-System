@@ -111,26 +111,53 @@ Adaptive-Self-Learning-Agentic-AI-System/
 │   ├── QUICK_REFERENCE.md        # Command reference
 │   └── LLM_INTEGRATION.md        # Gemma LLM integration
 │
-└── requirements.txt              # Python dependencies
+├── environment.yml               # Conda environment specification
+├── requirements.txt              # Python dependencies
+├── Dockerfile                    # Docker image configuration
+└── SETUP.md                      # Environment setup guide
 ```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.8+
+- Python 3.9+
 - CUDA-capable GPU (optional, for faster inference)
 - Google Cloud account (optional, for cloud integration)
+- Git LFS (for downloading large datasets)
 
 ### Installation
+
+**For detailed setup instructions, see [SETUP.md](SETUP.md)** which covers:
+- Conda environment setup (recommended)
+- Docker setup (for production)
+- Manual installation (advanced)
+
+**Quick start with Conda:**
 
 ```bash
 # 1. Clone the repository
 git clone <repository-url>
 cd Adaptive-Self-Learning-Agentic-AI-System
 
-# 2. Create virtual environment
-python -m venv venv
+# 2. Create conda environment (includes git-lfs, ffmpeg, and all dependencies)
+conda env create -f environment.yml
+conda activate stt-genai
+
+# 3. Verify installation
+python -c "import torch; print(torch.__version__)"
+git lfs version
+```
+
+**Alternative: Manual installation:**
+
+```bash
+# 1. Create virtual environment
+python3.9 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# 2. Install git-lfs (if not already installed)
+# macOS: brew install git-lfs && git lfs install
+# Ubuntu: sudo apt install git-lfs && git lfs install
 
 # 3. Install dependencies
 pip install -r requirements.txt

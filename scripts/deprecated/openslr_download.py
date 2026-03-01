@@ -31,7 +31,7 @@ OPENSLR_URLS = {
     "dev-other": "https://www.openslr.org/resources/12/dev-other.tar.gz",
     "musan": "https://www.openslr.org/resources/17/musan.tar.gz",
     "rirs_noises": "https://www.openslr.org/resources/28/rirs_noises.zip",
-    "tedlium3": "https://www.openslr.org/resources/51/TEDLIUM_release-3.tgz",
+    "tedlium3": "http://www.openslr.org/resources/51/TEDLIUM_release-3.tgz",
     "st_aeds": "https://www.openslr.org/resources/45/ST-AEDS-20180100_1-OS.tgz",
 }
 

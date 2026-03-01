@@ -76,7 +76,6 @@ scripts/data_gatherer/
 ```
 data/
 ├── huggingface/
-│   ├── common_voice_16_1/
 │   ├── common_voice_17_0/
 │   ├── librispeech_asr/
 │   ├── speech_commands/

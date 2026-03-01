@@ -155,7 +155,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Download Hugging Face dataset splits, save_to_disk, and write manifests."
     )
-    parser.add_argument("--dataset", required=True, help="Dataset id, e.g. mozilla-foundation/common_voice_17_0")
+    parser.add_argument("--dataset", required=True, help="Dataset id, e.g. fsicoli/common_voice_17_0")
     parser.add_argument("--config", default=None, help="Dataset config/name, e.g. en")
     parser.add_argument(
         "--split",

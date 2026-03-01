@@ -77,14 +77,13 @@ scripts/data_gatherer/
 
 ## Supported Data Sources
 
-### Hugging Face (6 datasets)
+### Hugging Face (5 datasets)
 
-1. Common Voice 16.1 (legacy)
-2. Common Voice 17.0 (current)
-3. LibriSpeech ASR
-4. Speech Commands v0.02
-5. VoxPopuli EN
-6. AfriMed-QA v2 (text-only)
+1. Common Voice 17.0 (current, community mirror: fsicoli/common_voice_17_0)
+2. LibriSpeech ASR
+3. Speech Commands v0.02 (google/speech_commands)
+4. VoxPopuli EN
+5. AfriMed-QA v2 (text-only)
 
 ### OpenSLR (8 datasets)
 
@@ -94,7 +93,7 @@ scripts/data_gatherer/
 4. LibriSpeech test-other
 5. MUSAN noise corpus
 6. RIRS_NOISES
-7. TED-LIUM Release 3
+7. TED-LIUM Release 3 (HTTP URL)
 8. ST-AEDS-20180100
 
 ### Git Repositories (1 dataset)
@@ -210,7 +209,7 @@ python scripts/openslr_download.py --dataset musan
 python scripts/primock_download.py
 
 # Download HF dataset
-python scripts/hf_download.py --dataset mozilla-foundation/common_voice_17_0
+python scripts/hf_download.py --dataset fsicoli/common_voice_17_0
 
 # Run full bootstrap
 python scripts/bootstrap_data.py --all
@@ -313,7 +312,7 @@ Example entry:
 ```yaml
 huggingface:
   common_voice_17_0:
-    dataset: "mozilla-foundation/common_voice_17_0"
+    dataset: "fsicoli/common_voice_17_0"
     config: "en"
     splits: ["train", "validation", "test"]
     description: "Common Voice 17.0 - Current version"
