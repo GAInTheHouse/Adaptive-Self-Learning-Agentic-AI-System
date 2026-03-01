@@ -176,7 +176,7 @@ ls -lh data/manifests/afrimedqa*.csv
 
 **Solution**:
 - VoxPopuli requires torchcodec with FFmpeg shared libraries
-- See detailed setup guide: `scripts/VOXPOPULI_SETUP.md`
+- See detailed setup guide in `scripts/data_gather.md` (VoxPopuli Special Setup section)
 - Quick fix (conda): `conda install -c conda-forge ffmpeg`
 
 ### Issue: "Failed to load dataset X"
@@ -208,7 +208,7 @@ pip install -r requirements.txt --upgrade
 
 After environment setup:
 
-1. **Download datasets**: See `scripts/DATA_GATHERING_QUICKSTART.md`
+1. **Download datasets**: See `scripts/data_gather.md`
 2. **Train models**: See main `README.md`
 3. **Run API**: See `src/README.md` (if available)
 
@@ -216,5 +216,4 @@ After environment setup:
 
 For issues or questions:
 - Check documentation in `scripts/data_gatherer/README.md`
-- Review `scripts/DATA_GATHERING_QUICKSTART.md` for common workflows
-- Check `scripts/deprecated/README.md` for migration from old scripts
+- Review `scripts/data_gather.md` for common workflows

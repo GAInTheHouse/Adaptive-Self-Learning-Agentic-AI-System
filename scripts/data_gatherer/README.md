@@ -278,7 +278,7 @@ scripts/data_gatherer/
     └── primock57.py            # ~120 lines
 ```
 
-**Total: ~1,070 lines** (vs 3,796 lines in deprecated scripts)
+**Total: ~1,070 lines of well-structured, modular code**
 
 ### Creating a New Plugin
 
@@ -395,19 +395,6 @@ pip install datasets
 - Resumable downloads for OpenSLR (no re-download on interruption)
 - Parallel processing possible (run multiple instances with different `--datasets`)
 - Cached Hugging Face downloads (via HF cache system)
-
-## Migration from Old Scripts
-
-See `scripts/deprecated/README.md` for detailed migration guide.
-
-**Quick reference:**
-
-| Old Command | New Command |
-|------------|-------------|
-| `python scripts/download_datasets.py` | `python scripts/gather_data.py --sources huggingface` |
-| `python scripts/bootstrap_data.py --all` | `python scripts/gather_data.py --sources all` |
-| `python scripts/hf_download.py --dataset X` | `python scripts/gather_data.py --datasets X` |
-| `python scripts/openslr_download.py --dataset musan` | `python scripts/gather_data.py --datasets musan` |
 
 ## License
 

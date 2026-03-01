@@ -1,8 +1,8 @@
-# Data Gathering Quick Start Guide
+# Data Gathering Guide
 
-**NEW**: All data scripts have been consolidated into `scripts/data_gatherer/`
+Unified data gathering system for downloading and processing speech and text datasets.
 
-## TL;DR
+## Quick Start
 
 ```bash
 # Download everything (15+ datasets)
@@ -12,22 +12,6 @@ python scripts/gather_data.py --sources all
 python scripts/gather_data.py --datasets common_voice_17_0 tedlium3 primock57
 ```
 
-## What Changed?
-
-### Before (Deprecated)
-
-- 8 different scripts with overlapping functionality
-- 3,796 lines of code with 60-70% duplication
-- Inconsistent interfaces and directory structures
-- Scattered configuration
-
-### After (Current)
-
-- Single unified system in `scripts/data_gatherer/`
-- 1,070 lines of well-structured code (71% reduction)
-- Plugin architecture for extensibility
-- YAML-based configuration for all datasets
-
 ## Available Datasets
 
 ### Speech Datasets (Audio)
@@ -35,7 +19,7 @@ python scripts/gather_data.py --datasets common_voice_17_0 tedlium3 primock57
 1. **Common Voice** (16.1 & 17.0) - Crowdsourced multi-accent speech
 2. **LibriSpeech** - Clean and challenging audiobook recordings
 3. **Speech Commands** - Keyword spotting (10h)
-4. **VoxPopuli** - European Parliament speeches (requires special setup - see `VOXPOPULI_SETUP.md`)
+4. **VoxPopuli** - European Parliament speeches (122GB, requires special setup - see below)
 5. **TED-LIUM Release 3** - Conversational talks (430h)
 6. **ST-AEDS** - Spontaneous speech (4.7h)
 7. **PriMock57** - Medical consultations (57 samples)
@@ -130,6 +114,107 @@ Key packages:
 - `soundfile` - Audio I/O
 - `numpy` - Array operations
 - `tqdm` - Progress bars
+
+## VoxPopuli Special Setup
+
+VoxPopuli is a large-scale multilingual speech corpus (122GB, 182K+ examples for English) that requires special setup due to its dependency on `torchcodec` and FFmpeg shared libraries.
+
+### Requirements
+
+1. **torchcodec** - Python library for audio/video decoding (included in `requirements.txt` and `environment.yml`)
+2. **FFmpeg shared libraries** - System libraries that torchcodec depends on
+
+### Installation
+
+**Option 1: Conda Environment (Recommended)**
+
+The FFmpeg package in conda-forge includes the necessary shared libraries:
+
+```bash
+# Activate the environment
+conda activate stt-genai
+
+# Install FFmpeg from conda-forge if not already installed
+conda install -c conda-forge ffmpeg
+
+# Verify torchcodec can load
+python -c "import torchcodec; print('torchcodec ready')"
+```
+
+**Option 2: System FFmpeg (macOS)**
+
+Install FFmpeg via Homebrew with shared libraries:
+
+```bash
+# Install FFmpeg
+brew install ffmpeg
+
+# Set library path for torchcodec
+export DYLD_LIBRARY_PATH="/opt/homebrew/opt/ffmpeg/lib:$DYLD_LIBRARY_PATH"
+
+# Verify
+python -c "import torchcodec; print('torchcodec ready')"
+```
+
+**Option 3: System FFmpeg (Linux)**
+
+Install FFmpeg development libraries:
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install libavutil-dev libavcodec-dev libavformat-dev libswscale-dev
+
+# Fedora/RHEL
+sudo dnf install ffmpeg-devel
+
+# Arch
+sudo pacman -S ffmpeg
+
+# Verify
+python -c "import torchcodec; print('torchcodec ready')"
+```
+
+### Downloading VoxPopuli
+
+Once torchcodec is properly configured:
+
+```bash
+# Download and generate manifests (this will take several hours)
+python scripts/gather_data.py --datasets voxpopuli --force
+
+# Check generated manifests
+ls -lh data/manifests/voxpopuli*.csv
+```
+
+### VoxPopuli Troubleshooting
+
+**Error: "Could not load libtorchcodec"**
+
+**Cause**: FFmpeg shared libraries are not found.
+
+**Solution**:
+1. Ensure FFmpeg is installed with shared libraries
+2. For conda: `conda install -c conda-forge ffmpeg`
+3. For macOS Homebrew: Set `DYLD_LIBRARY_PATH` as shown above
+4. For Linux: Install ffmpeg development packages
+
+**Error: "Library not loaded: @rpath/libavutil.XX.dylib"**
+
+**Cause**: The FFmpeg version installed doesn't match what torchcodec expects.
+
+**Solution**:
+- torchcodec supports FFmpeg versions 4, 5, 6, 7, and 8
+- Check your FFmpeg version: `ffmpeg -version`
+- Install a compatible version via conda or system package manager
+
+**Alternative: Skip VoxPopuli**
+
+If you don't need VoxPopuli, you can skip it:
+
+```bash
+# Download all datasets except VoxPopuli
+python scripts/gather_data.py --sources huggingface --datasets common_voice_17_0 librispeech_asr speech_commands afrimedqa
+```
 
 ## Troubleshooting
 
@@ -230,16 +315,12 @@ python scripts/gather_data.py \
 # Main command help
 python scripts/gather_data.py --help
 
-# See full documentation
+# See full technical documentation
 cat scripts/data_gatherer/README.md
 
 # Check available datasets
 cat scripts/data_gatherer/dataset_registry.yaml
 ```
-
-## Old Scripts
-
-Old data scripts have been moved to `scripts/deprecated/`. Do not use them. See `scripts/deprecated/README.md` for migration information.
 
 ---
 

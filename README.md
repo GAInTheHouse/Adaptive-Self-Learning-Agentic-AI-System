@@ -83,14 +83,15 @@ Adaptive-Self-Learning-Agentic-AI-System/
 │   └── example_usage.py          # Usage examples
 │
 ├── scripts/                      # Setup and deployment
+│   ├── gather_data.py            # Unified data gathering
+│   ├── augment_audio.py          # Audio augmentation
+│   ├── data_gatherer/            # Data gathering system
 │   ├── setup_environment.py      # Environment setup
 │   ├── verify_setup.py           # Verify installation
 │   ├── quick_setup.sh            # Quick setup script
 │   ├── setup_gcp_gpu.sh          # GCP GPU VM creation
 │   ├── deploy_to_gcp.py          # Deploy to GCP
-│   ├── monitor_gcp_costs.py      # Cost monitoring
-│   ├── preprocess_data.py        # Data preprocessing
-│   └── download_datasets.py      # Dataset downloads
+│   └── monitor_gcp_costs.py      # Cost monitoring
 │
 ├── data/                         # Data storage (created at runtime)
 │   ├── raw/                      # Raw audio files
