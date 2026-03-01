@@ -82,7 +82,7 @@ scripts/data_gatherer/
 1. Common Voice 17.0 (current, community mirror: fsicoli/common_voice_17_0)
 2. LibriSpeech ASR
 3. Speech Commands v0.02 (google/speech_commands)
-4. VoxPopuli EN
+4. VoxPopuli EN (requires torchcodec + FFmpeg libraries)
 5. AfriMed-QA v2 (text-only)
 
 ### OpenSLR (8 datasets)
@@ -93,8 +93,8 @@ scripts/data_gatherer/
 4. LibriSpeech test-other
 5. MUSAN noise corpus
 6. RIRS_NOISES
-7. TED-LIUM Release 3 (HTTP URL)
-8. ST-AEDS-20180100
+7. TED-LIUM Release 3 (HTTP URL) - requires manifest generator
+8. ST-AEDS-20180100 (3,842 utterances, 10 speakers)
 
 ### Git Repositories (1 dataset)
 

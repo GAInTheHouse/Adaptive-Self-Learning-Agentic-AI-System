@@ -85,6 +85,7 @@ class OpenSLRPlugin(DataSourcePlugin):
         import librispeech
         import musan
         import rirs
+        import st_aeds
         
         dataset_type = self._infer_dataset_type(dataset_name, data_dir)
         
@@ -94,6 +95,8 @@ class OpenSLRPlugin(DataSourcePlugin):
             return musan.generate(data_dir, manifest_dir, force)
         elif dataset_type == "rirs":
             return rirs.generate(data_dir, manifest_dir, force)
+        elif dataset_type == "st_aeds":
+            return st_aeds.generate(data_dir, manifest_dir, force)
         else:
             self.logger.warning(
                 "No manifest generator for dataset type: %s", dataset_type

@@ -55,6 +55,7 @@ dependencies:
     - pydub>=0.25.0
     - audioread>=3.0.0
     - jiwer>=3.0.0
+    - torchcodec>=0.1.0  # For VoxPopuli audio decoding
     
     # Google Cloud
     - google-cloud-storage>=2.10.0

@@ -35,7 +35,7 @@ python scripts/gather_data.py --datasets common_voice_17_0 tedlium3 primock57
 1. **Common Voice** (16.1 & 17.0) - Crowdsourced multi-accent speech
 2. **LibriSpeech** - Clean and challenging audiobook recordings
 3. **Speech Commands** - Keyword spotting (10h)
-4. **VoxPopuli** - European Parliament speeches
+4. **VoxPopuli** - European Parliament speeches (requires special setup - see `VOXPOPULI_SETUP.md`)
 5. **TED-LIUM Release 3** - Conversational talks (430h)
 6. **ST-AEDS** - Spontaneous speech (4.7h)
 7. **PriMock57** - Medical consultations (57 samples)

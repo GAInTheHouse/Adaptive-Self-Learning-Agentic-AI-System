@@ -33,6 +33,9 @@ huggingface:
     splits: ["train", "validation", "test"]
     description: "VoxPopuli English - European Parliament speeches"
     text_only: false
+    # NOTE: Requires torchcodec with FFmpeg shared libraries
+    #   macOS: Ensure FFmpeg is installed via conda-forge in the environment
+    #   Linux: Install ffmpeg development libraries (libavutil, libavcodec, etc.)
     
   afrimedqa:
     dataset: "afrimedqa/afrimedqa_v2"
@@ -98,8 +101,6 @@ openslr:
     description: "ST-AEDS spontaneous speech - 4.7h of spontaneous dialogue"
     extract_path: "ST-AEDS-20180100_1-OS"
     dataset_type: "st_aeds"
-    # NOTE: Downloads successfully but no manifest generator implemented yet
-    # Dataset will download but not generate manifests until generator is added
 
 # Git Repositories (with LFS support)
 git:

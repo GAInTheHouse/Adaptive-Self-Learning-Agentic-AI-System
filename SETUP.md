@@ -172,6 +172,13 @@ ls -lh data/manifests/afrimedqa*.csv
 - Conda: `conda install -c conda-forge git-lfs && git lfs install`
 - Manual: See system requirements above
 
+### Issue: VoxPopuli "Could not load libtorchcodec"
+
+**Solution**:
+- VoxPopuli requires torchcodec with FFmpeg shared libraries
+- See detailed setup guide: `scripts/VOXPOPULI_SETUP.md`
+- Quick fix (conda): `conda install -c conda-forge ffmpeg`
+
 ### Issue: "Failed to load dataset X"
 
 **Common causes**:
