@@ -3,7 +3,7 @@
 HuggingFace dataset plugin.
 
 Consolidates download and manifest generation logic for all Hugging Face datasets:
-- Common Voice (16.1, 17.0)
+- Common Voice (17.0)
 - LibriSpeech ASR
 - Speech Commands
 - VoxPopuli

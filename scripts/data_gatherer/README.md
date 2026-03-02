@@ -34,7 +34,7 @@ python scripts/data_gatherer/data_gather.py --sources all --force
 
 ### Hugging Face (5 datasets)
 
-- **Common Voice 16.1 & 17.0** - Crowdsourced speech corpus
+- **Common Voice 17.0** - Crowdsourced speech corpus
 - **LibriSpeech ASR** - Audiobook recordings
 - **Speech Commands** - Keyword spotting dataset
 - **VoxPopuli** - European Parliament speeches

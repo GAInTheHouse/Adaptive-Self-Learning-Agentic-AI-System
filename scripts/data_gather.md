@@ -19,7 +19,7 @@ python scripts/gather_data.py --datasets voxpopuli
 
 ### Speech Datasets (Audio)
 
-1. **Common Voice** (16.1 & 17.0) - Crowdsourced multi-accent speech
+1. **Common Voice** (17.0) - Crowdsourced multi-accent speech
 2. **LibriSpeech** - Clean and challenging audiobook recordings
 3. **Speech Commands** - Keyword spotting (10h)
 4. **VoxPopuli** - European Parliament speeches (122GB, requires special setup - see below)

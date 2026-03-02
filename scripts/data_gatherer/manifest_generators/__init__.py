@@ -10,6 +10,6 @@ __all__ = [
     "musan",
     "rirs",
     "primock57",
-    "hf_generic",
-    "afrimedqa",
+    "st_aeds",
+    "tedlium",
 ]

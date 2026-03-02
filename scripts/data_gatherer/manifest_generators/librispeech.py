@@ -95,43 +95,86 @@ def build_rows_for_split(split_dir: Path, split_name: str) -> List[Dict[str, str
     return rows
 
 
+def _is_single_split(candidate_dir: Path) -> bool:
+    """
+    Return True if candidate_dir is already a single LibriSpeech split directory.
+
+    A split directory contains numeric speaker-ID subdirectories (e.g. 1272/, 1673/)
+    rather than named split subdirectories (e.g. dev-clean/, dev-other/).
+    """
+    subdirs = [p for p in candidate_dir.iterdir() if p.is_dir()]
+    return bool(subdirs) and all(d.name.isdigit() for d in subdirs)
+
+
 def generate(data_dir: Path, manifest_dir: Path, force: bool) -> List[Path]:
     """
     Generate LibriSpeech manifest CSV files.
-    
+
+    Handles two layouts:
+
+    * Multi-split root (HF / full download)::
+
+        data_dir/LibriSpeech/dev-clean/...
+        data_dir/LibriSpeech/dev-other/...
+
+    * Single-split root (OpenSLR per-split download, e.g. dev-clean.tar.gz)::
+
+        data_dir/LibriSpeech/dev-clean/<speaker_id>/...
+        -- or --
+        data_dir/<speaker_id>/...   (extract_path points directly at the split)
+
     Args:
-        data_dir: Root directory containing LibriSpeech subsets
+        data_dir: Root directory for downloaded data
         manifest_dir: Output directory for manifest CSV files
         force: If True, overwrite existing manifests
-        
+
     Returns:
         List of generated manifest file paths
     """
     manifest_paths = []
-    
-    # Find all LibriSpeech split directories
+
+    # Prefer data_dir/LibriSpeech if it exists, otherwise treat data_dir as root
     librispeech_root = data_dir / "LibriSpeech"
     if not librispeech_root.exists():
         librispeech_root = data_dir
-    
-    split_dirs = [p for p in librispeech_root.iterdir() if p.is_dir()]
-    
-    if not split_dirs:
-        LOGGER.warning("No LibriSpeech split directories found in: %s", data_dir)
+
+    if not librispeech_root.exists():
+        LOGGER.warning("LibriSpeech root not found: %s", librispeech_root)
         return manifest_paths
-    
-    for split_dir in sorted(split_dirs):
-        split_name = split_dir.name
-        LOGGER.info("Generating manifest for LibriSpeech/%s", split_name)
-        
-        rows = build_rows_for_split(split_dir, split_name)
-        
+
+    split_dirs = [p for p in librispeech_root.iterdir() if p.is_dir()]
+
+    if not split_dirs:
+        LOGGER.warning("No LibriSpeech split directories found in: %s", librispeech_root)
+        return manifest_paths
+
+    # Detect whether librispeech_root is itself a single split (speaker-ID subdirs)
+    # This happens when extract_path already points at e.g. LibriSpeech/dev-clean.
+    if _is_single_split(librispeech_root):
+        split_name = librispeech_root.name
+        LOGGER.info("Detected single-split layout; treating %s as split '%s'", librispeech_root, split_name)
+        rows = build_rows_for_split(librispeech_root, split_name)
         if not rows:
-            LOGGER.warning("No audio files found in: %s", split_dir)
-            continue
-        
+            LOGGER.warning("No audio files found in: %s", librispeech_root)
+            return manifest_paths
         manifest_path = manifest_dir / f"librispeech__{split_name}.csv"
         write_manifest(rows, manifest_path, fieldnames=CSV_FIELDS, force=force)
         manifest_paths.append(manifest_path)
-    
+        return manifest_paths
+
+    # Multi-split layout: each subdirectory is a named split
+    for split_dir in sorted(split_dirs):
+        split_name = split_dir.name
+        LOGGER.info("Generating manifest for LibriSpeech/%s", split_name)
+
+        rows = build_rows_for_split(split_dir, split_name)
+
+        if not rows:
+            LOGGER.warning("No audio files found in: %s", split_dir)
+            continue
+
+        manifest_path = manifest_dir / f"librispeech__{split_name}.csv"
+        write_manifest(rows, manifest_path, fieldnames=CSV_FIELDS, force=force)
+        manifest_paths.append(manifest_path)
+
     return manifest_paths

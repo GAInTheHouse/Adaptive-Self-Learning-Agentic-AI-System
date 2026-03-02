@@ -95,9 +95,10 @@ class OpenSLRPlugin(DataSourcePlugin):
         import musan
         import rirs
         import st_aeds
-        
+        import tedlium
+
         dataset_type = self._infer_dataset_type(dataset_name, data_dir)
-        
+
         if dataset_type == "librispeech":
             return librispeech.generate(data_dir, manifest_dir, force)
         elif dataset_type == "musan":
@@ -106,6 +107,8 @@ class OpenSLRPlugin(DataSourcePlugin):
             return rirs.generate(data_dir, manifest_dir, force)
         elif dataset_type == "st_aeds":
             return st_aeds.generate(data_dir, manifest_dir, force)
+        elif dataset_type == "tedlium":
+            return tedlium.generate(data_dir, manifest_dir, force)
         else:
             self.logger.warning(
                 "No manifest generator for dataset type: %s", dataset_type
@@ -335,19 +338,28 @@ class OpenSLRPlugin(DataSourcePlugin):
         
         return None
     
+    @staticmethod
+    def _is_safe_path(dest: Path, out_dir_resolved: Path) -> bool:
+        """Return True if dest resolves to a path inside out_dir_resolved."""
+        try:
+            dest.relative_to(out_dir_resolved)
+            return True
+        except ValueError:
+            return False
+
     def _extract_archive(self, archive_path: Path, out_dir: Path) -> None:
         """Extract tar.gz, tgz, or zip archive with path-traversal safety checks."""
         archive_name = archive_path.name.lower()
         out_dir.mkdir(parents=True, exist_ok=True)
         out_dir_resolved = out_dir.resolve()
-        
+
         extracted_count = 0
-        
+
         if archive_name.endswith((".tar.gz", ".tgz")):
             with tarfile.open(archive_path, mode="r:gz") as tf:
                 for member in tf.getmembers():
                     dest = (out_dir / member.name).resolve()
-                    if not str(dest).startswith(str(out_dir_resolved)):
+                    if not self._is_safe_path(dest, out_dir_resolved):
                         raise RuntimeError(f"Unsafe archive member: {member.name}")
                     tf.extract(member, out_dir)
                     extracted_count += 1
@@ -355,7 +367,7 @@ class OpenSLRPlugin(DataSourcePlugin):
             with zipfile.ZipFile(archive_path, mode="r") as zf:
                 for info in zf.infolist():
                     dest = (out_dir / info.filename).resolve()
-                    if not str(dest).startswith(str(out_dir_resolved)):
+                    if not self._is_safe_path(dest, out_dir_resolved):
                         raise RuntimeError(f"Unsafe archive member: {info.filename}")
                     zf.extract(info, out_dir)
                     extracted_count += 1
@@ -364,8 +376,8 @@ class OpenSLRPlugin(DataSourcePlugin):
                 f"Unsupported archive format: {archive_path}. "
                 "Expected .tar.gz/.tgz or .zip"
             )
-        
+
         if extracted_count <= 0:
             raise RuntimeError(f"Archive extraction produced no entries: {archive_path}")
-        
+
         self.logger.info("Extracted %d items from %s", extracted_count, archive_path.name)
