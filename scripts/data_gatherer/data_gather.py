@@ -24,7 +24,6 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
-import yaml
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -54,6 +53,8 @@ def load_registry(registry_path: Path) -> dict:
     Returns:
         Parsed registry dictionary
     """
+    import yaml
+    
     if not registry_path.exists():
         raise RuntimeError(f"Registry file not found: {registry_path}")
     

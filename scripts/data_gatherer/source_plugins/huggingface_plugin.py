@@ -25,7 +25,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from source_plugins import DataSourcePlugin
 from dataset_utils import (
     CSV_FIELDS,
-    configure_logging,
     get_audio_metadata_soundfile,
     pick_field,
     require_package,

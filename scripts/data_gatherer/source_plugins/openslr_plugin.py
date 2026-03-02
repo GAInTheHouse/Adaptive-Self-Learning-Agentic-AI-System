@@ -116,27 +116,6 @@ class OpenSLRPlugin(DataSourcePlugin):
         """Infer dataset type from name or directory structure."""
         name_lower = dataset_name.lower()
         
-        # region agent log
-        import json
-        inferred = "unknown"
-        if "librispeech" in name_lower:
-            inferred = "librispeech"
-        elif "musan" in name_lower:
-            inferred = "musan"
-        elif "rirs" in name_lower or "noises" in name_lower:
-            inferred = "rirs"
-        elif "tedlium" in name_lower:
-            inferred = "tedlium"
-        elif "aeds" in name_lower:
-            inferred = "st_aeds"
-        
-        log_data = {"hypothesisId": "F", "runId": "debug1", "location": "openslr_plugin.py:115", "message": "Dataset type inference", "data": {"dataset_name": dataset_name, "inferred_type": inferred, "data_dir": str(data_dir)}, "timestamp": int(__import__('time').time() * 1000)}
-        try:
-            with open(_debug_log_path('manifest'), 'a') as f:
-                f.write(json.dumps(log_data) + '\n')
-        except: pass
-        # endregion
-        
         if "librispeech" in name_lower:
             return "librispeech"
         elif "musan" in name_lower:
@@ -357,22 +336,29 @@ class OpenSLRPlugin(DataSourcePlugin):
         return None
     
     def _extract_archive(self, archive_path: Path, out_dir: Path) -> None:
-        """Extract tar.gz, tgz, or zip archive."""
+        """Extract tar.gz, tgz, or zip archive with path-traversal safety checks."""
         archive_name = archive_path.name.lower()
         out_dir.mkdir(parents=True, exist_ok=True)
+        out_dir_resolved = out_dir.resolve()
         
         extracted_count = 0
         
         if archive_name.endswith((".tar.gz", ".tgz")):
             with tarfile.open(archive_path, mode="r:gz") as tf:
-                members = tf.getmembers()
-                extracted_count = len(members)
-                tf.extractall(out_dir)
+                for member in tf.getmembers():
+                    dest = (out_dir / member.name).resolve()
+                    if not str(dest).startswith(str(out_dir_resolved)):
+                        raise RuntimeError(f"Unsafe archive member: {member.name}")
+                    tf.extract(member, out_dir)
+                    extracted_count += 1
         elif archive_name.endswith(".zip"):
             with zipfile.ZipFile(archive_path, mode="r") as zf:
-                members = zf.infolist()
-                extracted_count = len(members)
-                zf.extractall(out_dir)
+                for info in zf.infolist():
+                    dest = (out_dir / info.filename).resolve()
+                    if not str(dest).startswith(str(out_dir_resolved)):
+                        raise RuntimeError(f"Unsafe archive member: {info.filename}")
+                    zf.extract(info, out_dir)
+                    extracted_count += 1
         else:
             raise RuntimeError(
                 f"Unsupported archive format: {archive_path}. "

@@ -19,7 +19,7 @@ import logging
 import random
 import re
 from pathlib import Path
-from typing import List, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 
 LOGGER = logging.getLogger("augment_audio")
@@ -55,7 +55,7 @@ def _list_audio_files(root: Path) -> List[Path]:
     return sorted(set(files))
 
 
-def _load_audio(path: Path, target_sr: int | None = None) -> Tuple["np.ndarray", int]:
+def _load_audio(path: Path, target_sr: Optional[int] = None) -> Tuple["np.ndarray", int]:
     import librosa
     import numpy as np
 
@@ -167,13 +167,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--musan-dir",
         type=Path,
-        default=Path("data") / "openslr" / "SLR17_MUSAN" / "musan" / "noise",
+        default=Path("data") / "openslr" / "musan" / "musan" / "noise",
         help="MUSAN noise directory (canonical open augmentation corpus).",
     )
     parser.add_argument(
         "--rirs-dir",
         type=Path,
-        default=Path("data") / "openslr" / "SLR28_RIRS_NOISES" / "RIRS_NOISES",
+        default=Path("data") / "openslr" / "rirs_noises" / "RIRS_NOISES",
         help="RIRS directory (canonical open augmentation corpus).",
     )
     parser.add_argument(
