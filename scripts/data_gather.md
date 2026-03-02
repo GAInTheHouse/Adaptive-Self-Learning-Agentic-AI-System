@@ -5,11 +5,14 @@ Unified data gathering system for downloading and processing speech and text dat
 ## Quick Start
 
 ```bash
-# Download everything (15+ datasets)
+# Download all datasets (excludes VoxPopuli - 122GB, special setup required)
 python scripts/gather_data.py --sources all
 
 # Download specific datasets
 python scripts/gather_data.py --datasets common_voice_17_0 tedlium3 primock57
+
+# Download VoxPopuli when needed (requires torchcodec/FFmpeg setup first)
+python scripts/gather_data.py --datasets voxpopuli
 ```
 
 ## Available Datasets
@@ -62,7 +65,7 @@ python scripts/gather_data.py --datasets primock57 afrimedqa
 ### 4. Download Everything
 
 ```bash
-# All 15 datasets
+# All datasets except VoxPopuli (VoxPopuli excluded by default - 122GB, special setup)
 python scripts/gather_data.py --sources all
 ```
 

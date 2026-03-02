@@ -39,6 +39,10 @@ from source_plugins.git_plugin import GitPlugin
 
 LOGGER = configure_logging("data_gather")
 
+# Datasets excluded from "all" - only downloaded when explicitly requested
+# (VoxPopuli is 122GB and requires special torchcodec/FFmpeg setup)
+DATASETS_EXCLUDED_FROM_ALL = ["voxpopuli"]
+
 
 def load_registry(registry_path: Path) -> dict:
     """
@@ -125,6 +129,10 @@ def download_datasets(
         for dataset_name, config in datasets.items():
             # Filter if specific datasets requested
             if dataset_names and dataset_name not in dataset_names:
+                continue
+            # Skip datasets excluded from "all" (only download when explicitly requested)
+            if dataset_names is None and dataset_name in DATASETS_EXCLUDED_FROM_ALL:
+                LOGGER.info("Skipping %s (excluded from --sources all; use --datasets %s to download)", dataset_name, dataset_name)
                 continue
             
             LOGGER.info("=" * 60)
