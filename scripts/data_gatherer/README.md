@@ -92,7 +92,7 @@ data/
 └── manifests/              # Unified CSVs
     ├── common_voice_17_0__train.csv
     ├── librispeech__dev-clean.csv
-    ├── tedlium3__train.csv
+    ├── tedlium__train.csv
     ├── primock57__full.csv
     └── ... (one per dataset-split)
 ```
@@ -341,7 +341,7 @@ print(plugin.get_source_type())
 ### Integration Testing
 
 ```bash
-# Dry-run (won't download, but tests orchestration)
+# Small integration test (downloads MUSAN ~1GB, verifies orchestration)
 python scripts/data_gatherer/data_gather.py \
   --datasets musan \
   --output-dir /tmp/test_data \

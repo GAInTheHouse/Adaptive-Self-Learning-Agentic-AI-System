@@ -77,7 +77,7 @@ usage: data_gather.py [-h] [--registry REGISTRY]
                       [--datasets [DATASETS ...]]
                       [--output-dir OUTPUT_DIR]
                       [--manifest-dir MANIFEST_DIR]
-                      [--augment] [--derive-variants] [--force]
+                      [--augment] [--force]
 
 Options:
   --sources          Source types: all, huggingface, openslr, git
@@ -85,8 +85,7 @@ Options:
   --output-dir       Base directory for downloaded data (default: data/)
   --manifest-dir     Directory for CSV manifests (default: data/manifests/)
   --force            Re-download existing datasets
-  --augment          Generate augmented variants (requires MUSAN/RIRS)
-  --derive-variants  Generate low-quality and corrupted variants
+  --augment          Run noise augmentation after download (requires MUSAN/RIRS)
 ```
 
 ## Prerequisites

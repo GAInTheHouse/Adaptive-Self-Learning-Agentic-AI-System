@@ -29,7 +29,6 @@ from typing import Dict, List, Optional, Tuple
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from source_plugins import DataSourcePlugin
-from dataset_utils import configure_logging
 
 
 LOGGER = logging.getLogger("OpenSLRPlugin")
