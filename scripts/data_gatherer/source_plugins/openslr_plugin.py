@@ -12,6 +12,7 @@ Handles downloading and manifest generation for OpenSLR datasets:
 
 from __future__ import annotations
 
+import datetime
 import hashlib
 import logging
 import re
@@ -32,6 +33,14 @@ from dataset_utils import configure_logging
 
 
 LOGGER = logging.getLogger("OpenSLRPlugin")
+
+_LOG_DIR = Path(__file__).resolve().parent.parent.parent / 'logs'
+_SESSION_TS = datetime.datetime.now().strftime('%Y%m%dT%H%M%S')
+
+
+def _debug_log_path(operation: str) -> Path:
+    _LOG_DIR.mkdir(parents=True, exist_ok=True)
+    return _LOG_DIR / f'{_SESSION_TS}-{operation}.log'
 
 
 class OpenSLRPlugin(DataSourcePlugin):
@@ -123,7 +132,7 @@ class OpenSLRPlugin(DataSourcePlugin):
         
         log_data = {"hypothesisId": "F", "runId": "debug1", "location": "openslr_plugin.py:115", "message": "Dataset type inference", "data": {"dataset_name": dataset_name, "inferred_type": inferred, "data_dir": str(data_dir)}, "timestamp": int(__import__('time').time() * 1000)}
         try:
-            with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+            with open(_debug_log_path('manifest'), 'a') as f:
                 f.write(json.dumps(log_data) + '\n')
         except: pass
         # endregion
@@ -196,7 +205,7 @@ class OpenSLRPlugin(DataSourcePlugin):
             import json
             log_data = {"hypothesisId": "D", "runId": "debug1", "location": "openslr_plugin.py:169", "message": "HEAD request failed", "data": {"url": url, "error_type": type(head_exc).__name__, "error_msg": str(head_exc)}, "timestamp": int(__import__('time').time() * 1000)}
             try:
-                with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                with open(_debug_log_path('download'), 'a') as f:
                     f.write(json.dumps(log_data) + '\n')
             except: pass
             # endregion

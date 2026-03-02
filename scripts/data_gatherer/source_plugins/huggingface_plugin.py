@@ -12,6 +12,7 @@ Consolidates download and manifest generation logic for all Hugging Face dataset
 
 from __future__ import annotations
 
+import datetime
 import logging
 import shutil
 import sys
@@ -34,6 +35,14 @@ from dataset_utils import (
 
 
 LOGGER = logging.getLogger("HuggingFacePlugin")
+
+_LOG_DIR = Path(__file__).resolve().parent.parent.parent / 'logs'
+_SESSION_TS = datetime.datetime.now().strftime('%Y%m%dT%H%M%S')
+
+
+def _debug_log_path(operation: str) -> Path:
+    _LOG_DIR.mkdir(parents=True, exist_ok=True)
+    return _LOG_DIR / f'{_SESSION_TS}-{operation}.log'
 
 # Different CSV fields for text-only datasets
 AFRIMEDQA_FIELDS = [
@@ -97,7 +106,7 @@ class HuggingFacePlugin(DataSourcePlugin):
             from pathlib import Path as LogPath
             log_data = {"hypothesisId": "A", "runId": "debug1", "location": "huggingface_plugin.py:92", "message": "Attempting HF load", "data": {"dataset_name": dataset_name, "config": dataset_config, "splits": splits}, "timestamp": int(__import__('time').time() * 1000)}
             try:
-                with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                with open(_debug_log_path('download'), 'a') as f:
                     f.write(json.dumps(log_data) + '\n')
             except: pass
             # endregion
@@ -111,7 +120,7 @@ class HuggingFacePlugin(DataSourcePlugin):
             # region agent log
             log_data2 = {"hypothesisId": "A,B", "runId": "debug1", "location": "huggingface_plugin.py:110", "message": "HF load success", "data": {"dataset_name": dataset_name, "available_splits": list(dataset.keys()) if hasattr(dataset, 'keys') else []}, "timestamp": int(__import__('time').time() * 1000)}
             try:
-                with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                with open(_debug_log_path('download'), 'a') as f:
                     f.write(json.dumps(log_data2) + '\n')
             except: pass
             # endregion
@@ -120,7 +129,7 @@ class HuggingFacePlugin(DataSourcePlugin):
             # region agent log
             log_data3 = {"hypothesisId": "A,B,C", "runId": "debug1", "location": "huggingface_plugin.py:121", "message": "HF load failed", "data": {"dataset_name": dataset_name, "error_type": type(exc).__name__, "error_msg": str(exc)}, "timestamp": int(__import__('time').time() * 1000)}
             try:
-                with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                with open(_debug_log_path('download'), 'a') as f:
                     f.write(json.dumps(log_data3) + '\n')
             except: pass
             # endregion
@@ -134,7 +143,7 @@ class HuggingFacePlugin(DataSourcePlugin):
             import json
             log_data = {"hypothesisId": "B", "runId": "debug1", "location": "huggingface_plugin.py:137", "message": "Checking split", "data": {"split_name": split_name, "available_splits": list(dataset.keys()), "split_exists": split_name in dataset}, "timestamp": int(__import__('time').time() * 1000)}
             try:
-                with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                with open(_debug_log_path('download'), 'a') as f:
                     f.write(json.dumps(log_data) + '\n')
             except: pass
             # endregion
@@ -163,7 +172,7 @@ class HuggingFacePlugin(DataSourcePlugin):
                 import json
                 log_data = {"hypothesisId": "E", "runId": "debug1", "location": "huggingface_plugin.py:157", "message": "Audio column detection", "data": {"dataset_name": dataset_name, "split_name": split_name, "audio_col": audio_col, "columns": list(split_ds.column_names)[:10]}, "timestamp": int(__import__('time').time() * 1000)}
                 try:
-                    with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                    with open(_debug_log_path('download'), 'a') as f:
                         f.write(json.dumps(log_data) + '\n')
                 except: pass
                 # endregion
@@ -185,7 +194,7 @@ class HuggingFacePlugin(DataSourcePlugin):
             import json
             log_data = {"hypothesisId": "E", "runId": "debug1", "location": "huggingface_plugin.py:181", "message": "Before save", "data": {"split_name": split_name, "split_output": str(split_output), "exists": split_output.exists(), "force": force, "num_examples": len(split_ds)}, "timestamp": int(__import__('time').time() * 1000)}
             try:
-                with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                with open(_debug_log_path('download'), 'a') as f:
                     f.write(json.dumps(log_data) + '\n')
             except: pass
             # endregion
@@ -208,7 +217,7 @@ class HuggingFacePlugin(DataSourcePlugin):
                 saved_files = list(split_output.glob("*")) if split_output.exists() else []
                 log_data2 = {"hypothesisId": "E", "runId": "debug1", "location": "huggingface_plugin.py:203", "message": "After save", "data": {"split_name": split_name, "split_output": str(split_output), "saved_files_count": len(saved_files), "has_arrow_files": any(f.suffix == '.arrow' for f in saved_files)}, "timestamp": int(__import__('time').time() * 1000)}
                 try:
-                    with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                    with open(_debug_log_path('download'), 'a') as f:
                         f.write(json.dumps(log_data2) + '\n')
                 except: pass
                 # endregion
@@ -217,7 +226,7 @@ class HuggingFacePlugin(DataSourcePlugin):
                 # region agent log
                 log_data3 = {"hypothesisId": "E", "runId": "debug1", "location": "huggingface_plugin.py:214", "message": "Save failed", "data": {"split_name": split_name, "error_type": type(save_exc).__name__, "error_msg": str(save_exc)}, "timestamp": int(__import__('time').time() * 1000)}
                 try:
-                    with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                    with open(_debug_log_path('download'), 'a') as f:
                         f.write(json.dumps(log_data3) + '\n')
                 except: pass
                 # endregion
@@ -248,7 +257,7 @@ class HuggingFacePlugin(DataSourcePlugin):
         import json
         log_data = {"hypothesisId": "E", "runId": "debug1", "location": "huggingface_plugin.py:244", "message": "Manifest gen start", "data": {"data_dir": str(data_dir), "split_dirs_found": [str(d) for d in split_dirs]}, "timestamp": int(__import__('time').time() * 1000)}
         try:
-            with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+            with open(_debug_log_path('manifest'), 'a') as f:
                 f.write(json.dumps(log_data) + '\n')
         except: pass
         # endregion
@@ -261,7 +270,7 @@ class HuggingFacePlugin(DataSourcePlugin):
             files_in_split = list(split_dir.glob("*")) if split_dir.exists() else []
             log_data2 = {"hypothesisId": "E", "runId": "debug1", "location": "huggingface_plugin.py:257", "message": "Attempting load", "data": {"split_name": split_name, "split_dir": str(split_dir), "exists": split_dir.exists(), "files_count": len(files_in_split), "has_arrow": any(f.suffix == '.arrow' for f in files_in_split)}, "timestamp": int(__import__('time').time() * 1000)}
             try:
-                with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                with open(_debug_log_path('manifest'), 'a') as f:
                     f.write(json.dumps(log_data2) + '\n')
             except: pass
             # endregion
@@ -272,7 +281,7 @@ class HuggingFacePlugin(DataSourcePlugin):
                 # region agent log
                 log_data3 = {"hypothesisId": "E", "runId": "debug1", "location": "huggingface_plugin.py:270", "message": "Load success", "data": {"split_name": split_name, "num_examples": len(split_ds)}, "timestamp": int(__import__('time').time() * 1000)}
                 try:
-                    with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                    with open(_debug_log_path('manifest'), 'a') as f:
                         f.write(json.dumps(log_data3) + '\n')
                 except: pass
                 # endregion
@@ -281,7 +290,7 @@ class HuggingFacePlugin(DataSourcePlugin):
                 # region agent log
                 log_data4 = {"hypothesisId": "E", "runId": "debug1", "location": "huggingface_plugin.py:280", "message": "Load failed", "data": {"split_name": split_name, "error_type": type(exc).__name__, "error_msg": str(exc)[:200]}, "timestamp": int(__import__('time').time() * 1000)}
                 try:
-                    with open('/Users/gainthehouse/Desktop/Code/Adaptive-Self-Learning-Agentic-AI-System/.cursor/debug-3abd3e.log', 'a') as f:
+                    with open(_debug_log_path('manifest'), 'a') as f:
                         f.write(json.dumps(log_data4) + '\n')
                 except: pass
                 # endregion
