@@ -8,11 +8,17 @@ datasets>=2.14.0
 bitsandbytes>=0.40.0  # For quantization (4-bit/8-bit). 0.43+ is Linux-only; use 0.40–0.42 on macOS.
 peft>=0.8.0  # For LoRA fine-tuning
 
+# Bootstrap data pipeline
+datasets>=2.14.0
+soundfile>=0.12.0
+pandas>=2.0.0
+tqdm>=4.65.0
+
 # Audio processing
 librosa>=0.10.0
-soundfile>=0.12.0
 pydub>=0.25.0
 audioread>=3.0.0
+torchcodec>=0.1.0  # For VoxPopuli audio decoding
 
 # Evaluation
 jiwer>=3.0.0
@@ -22,7 +28,6 @@ google-cloud-storage>=2.10.0
 gcsfs>=2023.6.0
 
 # Data processing
-pandas>=2.0.0
 numpy>=1.24.0
 scikit-learn>=1.3.0
 scipy>=1.11.0  # For statistical analysis (Week 4)
@@ -35,7 +40,6 @@ seaborn>=0.12.0
 wandb>=0.16.0
 
 # Utilities
-tqdm>=4.65.0
 pyyaml>=6.0
 python-dotenv>=1.0.0
 

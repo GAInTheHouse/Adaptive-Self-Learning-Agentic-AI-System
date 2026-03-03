@@ -14,6 +14,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     make \
     libsndfile1 \
     ffmpeg \
+    git-lfs \
+    && git lfs install \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
@@ -33,6 +35,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsndfile1 \
     ffmpeg \
     curl \
+    git \
+    git-lfs \
+    && git lfs install \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python dependencies from builder
