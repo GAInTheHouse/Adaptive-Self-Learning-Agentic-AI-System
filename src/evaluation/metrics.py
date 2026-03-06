@@ -9,21 +9,30 @@ from pathlib import Path
 from typing import List, Dict, Optional, Tuple, Any, Union
 import logging
 import re
-import nltk
 from collections import defaultdict
 
-# Download required NLTK data
+# Optional NLTK import for verb extraction
 try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt', quiet=True)
-try:
-    nltk.data.find('taggers/averaged_perceptron_tagger')
-except LookupError:
-    nltk.download('averaged_perceptron_tagger', quiet=True)
+    import nltk
+    # Download required NLTK data
+    try:
+        nltk.data.find('tokenizers/punkt')
+    except LookupError:
+        nltk.download('punkt', quiet=True)
+    try:
+        nltk.data.find('taggers/averaged_perceptron_tagger')
+    except LookupError:
+        nltk.download('averaged_perceptron_tagger', quiet=True)
+    NLTK_AVAILABLE = True
+except ImportError:
+    NLTK_AVAILABLE = False
+    nltk = None
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+if not NLTK_AVAILABLE:
+    logger.warning("NLTK not available. Verb Error Rate will use fallback method.")
 
 
 def _load_pairs_from_json(path: Path, ref_key: str, hyp_key: str) -> tuple:
