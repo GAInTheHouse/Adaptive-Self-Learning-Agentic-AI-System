@@ -16,6 +16,8 @@ audioread>=3.0.0
 
 # Evaluation
 jiwer>=3.0.0
+nltk>=3.8.0
+pyannote.metrics>=4.0.0  # For DER calculation
 
 # Google Cloud
 google-cloud-storage>=2.10.0
@@ -41,6 +43,12 @@ python-dotenv>=1.0.0
 
 # Ollama for LLM inference (Llama 2/3)
 ollama>=0.1.0
+
+# OpenAI API for Oracle Teacher
+openai>=1.0.0
+
+# Faster Whisper for AReal investigation
+faster-whisper>=0.10.0
 
 # Development
 pytest>=7.4.0
