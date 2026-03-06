@@ -217,15 +217,27 @@ class STTEvaluator:
     
     def extract_verbs(self, text: str) -> List[str]:
         """Extract verbs from text using NLTK POS tagging."""
-        try:
-            tokens = nltk.word_tokenize(text.lower())
-            pos_tags = nltk.pos_tag(tokens)
-            verbs = [word for word, pos in pos_tags if pos.startswith('VB')]
-            return verbs
-        except Exception as e:
-            logger.warning(f"Error extracting verbs: {e}")
-            # Fallback: simple verb detection
-            return [word for word in text.lower().split() if word.endswith(('ed', 'ing', 's'))]
+        if NLTK_AVAILABLE:
+            try:
+                tokens = nltk.word_tokenize(text.lower())
+                pos_tags = nltk.pos_tag(tokens)
+                verbs = [word for word, pos in pos_tags if pos.startswith('VB')]
+                return verbs
+            except Exception as e:
+                logger.warning(f"Error extracting verbs with NLTK: {e}")
+                # Fallback: simple verb detection
+                return self._fallback_verb_extraction(text)
+        else:
+            # Fallback: simple verb detection when NLTK not available
+            return self._fallback_verb_extraction(text)
+    
+    def _fallback_verb_extraction(self, text: str) -> List[str]:
+        """Fallback verb extraction without NLTK."""
+        words = text.lower().split()
+        # Simple heuristic: words ending in common verb suffixes
+        verb_suffixes = ('ed', 'ing', 's', 'es', 'en')
+        verbs = [word for word in words if any(word.endswith(suffix) for suffix in verb_suffixes)]
+        return verbs
     
     def calculate_verb_error_rate(self, reference: str, hypothesis: str) -> float:
         """
