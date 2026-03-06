@@ -300,32 +300,15 @@ print(f"Total cases: {stats['data_management']['total_failed_cases']}")
 print(f"Correction rate: {stats['data_management']['correction_rate']:.1%}")
 ```
 
-### 4. Evaluation Framework Setup
+### 4. Evaluation Setup
 
-Set up and run comprehensive evaluation:
+Run evaluation with an evaluation set file (JSON/JSONL/CSV with `audio_path` and `reference`):
 
-```python
-from experiments.kavya_evaluation_framework import EvaluationFramework
-
-# Initialize framework
-framework = EvaluationFramework(
-    model_name="whisper",
-    output_dir="experiments/evaluation_outputs"
-)
-
-# Run evaluation (requires test dataset)
-results = framework.run_comprehensive_evaluation(
-    eval_datasets=["data/processed/test_dataset"],
-    output_report=True,
-    generate_visualizations=True
-)
-
-# Results saved to:
-# - experiments/evaluation_outputs/evaluation_report.json
-# - experiments/evaluation_outputs/evaluation_summary.json
-# - experiments/evaluation_outputs/benchmark_report.json
-# - experiments/evaluation_outputs/visualizations/*.png
+```bash
+python experiments/run_evaluation.py --eval-set path/to/eval_set.json
 ```
+
+Results are saved to `experiments/evaluation_outputs/` (evaluation_report.json, evaluation_report.txt; use `--benchmark` for benchmark_report.json). See **docs/EVALUATION_SUMMARY.md** for full options.
 
 ## 🏃 Running the System
 
@@ -521,23 +504,19 @@ python experiments/test_api.py
 pkill -f "uvicorn src.agent_api:app"
 ```
 
-### Run Evaluation & Benchmarks
+### Run Evaluation
 
-**Comprehensive Evaluation:**
+**Evaluation (baseline + improved models):**
 ```bash
-cd experiments
-python kavya_evaluation_framework.py
+python experiments/run_evaluation.py --eval-set path/to/eval_set.json
 ```
 
-**Performance Benchmarking:**
+With latency/throughput benchmark:
 ```bash
-python experiments/run_benchmark.py
+python experiments/run_evaluation.py --eval-set path/to/eval_set.json --benchmark
 ```
 
-**Generate Visualizations:**
-```bash
-python experiments/visualize_evaluation_results.py
-```
+See **docs/EVALUATION_SUMMARY.md** for input format and options.
 
 ## ☁️ GCP Setup (Optional)
 

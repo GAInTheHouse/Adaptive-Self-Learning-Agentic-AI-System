@@ -237,12 +237,18 @@ class OllamaLLM:
                 **kwargs
             )
             
-            # Validate response type
-            if not isinstance(response, dict):
-                raise RuntimeError(f"Unexpected response type: {type(response)}. Expected dict.")
+            # Handle both dict (older ollama versions) and GenerateResponse object (newer versions)
+            if isinstance(response, dict):
+                result = response.get('response', '')
+            elif hasattr(response, 'response'):
+                # GenerateResponse object (newer ollama package)
+                result = response.response
+            elif hasattr(response, 'text'):
+                # Alternative attribute name
+                result = response.text
+            else:
+                raise RuntimeError(f"Unexpected response type: {type(response)}. Expected dict or GenerateResponse.")
             
-            # Extract and validate result
-            result = response.get('response', '')
             if not result:
                 logger.warning("Ollama returned empty response")
             
@@ -279,16 +285,26 @@ class OllamaLLM:
                 **kwargs
             )
             
-            # Validate response type
-            if not isinstance(response, dict):
-                raise RuntimeError(f"Unexpected response type: {type(response)}. Expected dict.")
+            # Handle both dict (older ollama versions) and ChatResponse object (newer versions)
+            if isinstance(response, dict):
+                message = response.get('message', {})
+                if isinstance(message, dict):
+                    result = message.get('content', '')
+                else:
+                    result = str(message)
+            elif hasattr(response, 'message'):
+                # ChatResponse object (newer ollama package)
+                message = response.message
+                if hasattr(message, 'content'):
+                    result = message.content
+                else:
+                    result = str(message)
+            elif hasattr(response, 'content'):
+                # Direct content attribute
+                result = response.content
+            else:
+                raise RuntimeError(f"Unexpected response type: {type(response)}. Expected dict or ChatResponse.")
             
-            # Extract and validate result
-            message = response.get('message', {})
-            if not isinstance(message, dict):
-                raise RuntimeError(f"Unexpected message type: {type(message)}. Expected dict.")
-            
-            result = message.get('content', '')
             if not result:
                 logger.warning("Ollama returned empty chat response")
             

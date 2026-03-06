@@ -77,21 +77,21 @@ Adaptive-Self-Learning-Agentic-AI-System/
 │   ├── test_agent.py             # Test agent functionality
 │   ├── test_api.py               # Test API endpoints
 │   ├── test_data_management.py   # Test data management
-│   ├── kavya_evaluation_framework.py  # Comprehensive evaluation
+│   ├── run_evaluation.py         # Evaluate dataset on baseline + improved models
 │   ├── evaluate_models.py        # Model evaluation
-│   ├── run_benchmark.py          # Performance benchmarking
 │   ├── visualize_evaluation_results.py # Generate charts
 │   └── example_usage.py          # Usage examples
 │
 ├── scripts/                      # Setup and deployment
+│   ├── gather_data.py            # Unified data gathering
+│   ├── augment_audio.py          # Audio augmentation
+│   ├── data_gatherer/            # Data gathering system
 │   ├── setup_environment.py      # Environment setup
 │   ├── verify_setup.py           # Verify installation
 │   ├── quick_setup.sh            # Quick setup script
 │   ├── setup_gcp_gpu.sh          # GCP GPU VM creation
 │   ├── deploy_to_gcp.py          # Deploy to GCP
-│   ├── monitor_gcp_costs.py      # Cost monitoring
-│   ├── preprocess_data.py        # Data preprocessing
-│   └── download_datasets.py      # Dataset downloads
+│   └── monitor_gcp_costs.py      # Cost monitoring
 │
 ├── data/                         # Data storage (created at runtime)
 │   ├── raw/                      # Raw audio files
@@ -112,26 +112,53 @@ Adaptive-Self-Learning-Agentic-AI-System/
 │   ├── QUICK_REFERENCE.md        # Command reference
 │   └── LLM_INTEGRATION.md        # Gemma LLM integration
 │
-└── requirements.txt              # Python dependencies
+├── environment.yml               # Conda environment specification
+├── requirements.txt              # Python dependencies
+├── Dockerfile                    # Docker image configuration
+└── SETUP.md                      # Environment setup guide
 ```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.8+
+- Python 3.9+
 - CUDA-capable GPU (optional, for faster inference)
 - Google Cloud account (optional, for cloud integration)
+- Git LFS (for downloading large datasets)
 
 ### Installation
+
+**For detailed setup instructions, see [SETUP.md](SETUP.md)** which covers:
+- Conda environment setup (recommended)
+- Docker setup (for production)
+- Manual installation (advanced)
+
+**Quick start with Conda:**
 
 ```bash
 # 1. Clone the repository
 git clone <repository-url>
 cd Adaptive-Self-Learning-Agentic-AI-System
 
-# 2. Create virtual environment
-python -m venv venv
+# 2. Create conda environment (includes git-lfs, ffmpeg, and all dependencies)
+conda env create -f environment.yml
+conda activate stt-genai
+
+# 3. Verify installation
+python -c "import torch; print(torch.__version__)"
+git lfs version
+```
+
+**Alternative: Manual installation:**
+
+```bash
+# 1. Create virtual environment
+python3.9 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# 2. Install git-lfs (if not already installed)
+# macOS: brew install git-lfs && git lfs install
+# Ubuntu: sudo apt install git-lfs && git lfs install
 
 # 3. Install dependencies
 pip install -r requirements.txt
@@ -267,26 +294,24 @@ system.record_training_performance(
 report = system.generate_comprehensive_report()
 ```
 
-### 4. Evaluation Framework (`experiments/kavya_evaluation_framework.py`)
+### 4. Evaluation (`experiments/run_evaluation.py`)
 
-Comprehensive evaluation with metrics and visualization.
+Evaluate any dataset (audio + ground-truth references) on the baseline and on improved (fine-tuned) models if they exist.
 
 **Features:**
-- WER/CER calculation
-- Error analysis
-- Performance benchmarking
-- Visualization generation
+- WER/CER for baseline (Whisper) and all fine-tuned Wav2Vec2 versions
+- Optional latency/throughput benchmark (`--benchmark`)
 
 **Usage:**
-```python
-from experiments.kavya_evaluation_framework import EvaluationFramework
+```bash
+# Eval set file (JSON/JSONL/CSV with audio_path + reference)
+python experiments/run_evaluation.py --eval-set path/to/eval_set.json
 
-framework = EvaluationFramework(model_name="whisper")
-results = framework.run_comprehensive_evaluation(
-    eval_datasets=["data/processed/test_dataset"],
-    output_report=True
-)
+# Or audio directory + refs file
+python experiments/run_evaluation.py --audio-dir data/recordings_for_test --refs path/to/refs.json
 ```
+
+See **`docs/EVALUATION_SUMMARY.md`** for full options and examples.
 
 ## 🌐 Running the System
 
@@ -342,37 +367,24 @@ curl -X POST "http://localhost:8000/transcribe" \
   -F "file=@data/test_audio/test_1.wav"
 ```
 
-### 3. Evaluation & Benchmarking
+### 3. Evaluation
 
-#### Run Comprehensive Evaluation
+#### Run evaluation (baseline + improved models)
 ```bash
-cd experiments
-python kavya_evaluation_framework.py
+python experiments/run_evaluation.py --eval-set path/to/eval_set.json
 ```
 
-Output:
-- `evaluation_outputs/evaluation_report.json` - Detailed results
-- `evaluation_outputs/evaluation_summary.json` - Summary metrics
-- `docs/EVALUATION_SUMMARY.md` - Human-readable report
-- `evaluation_outputs/visualizations/` - Charts and graphs
-
-#### Run Benchmark Tests
+With latency/throughput benchmark:
 ```bash
-python experiments/run_benchmark.py
+python experiments/run_evaluation.py --eval-set path/to/eval_set.json --benchmark
 ```
 
-Output:
-- `evaluation_outputs/benchmark_report.json` - Performance metrics
+Output (in `experiments/evaluation_outputs/`):
+- `evaluation_report.json` - Baseline and improved-model WER/CER
+- `evaluation_report.txt` - Short summary
+- `benchmark_report.json` - If `--benchmark` was used
 
-#### Visualize Results
-```bash
-python experiments/visualize_evaluation_results.py
-```
-
-Generates:
-- WER/CER comparison charts
-- Error distribution histograms
-- Comprehensive dashboards
+See **`docs/EVALUATION_SUMMARY.md`** for input format (eval set, audio-dir + refs, or --gold-from-llm) and all options.
 
 ### 4. Testing Components
 
@@ -630,24 +642,14 @@ if user_correction:
     data_system.add_correction(case_id, user_correction)
 ```
 
-### Workflow 2: Model Evaluation & Comparison
+### Workflow 2: Model Evaluation
 
-```python
-from experiments.kavya_evaluation_framework import EvaluationFramework
-
-# Evaluate baseline model
-framework = EvaluationFramework(model_name="whisper")
-results = framework.run_comprehensive_evaluation(
-    eval_datasets=["data/processed/test_dataset"]
-)
-
-# Generate visualizations
-framework.generate_visualizations()
-
-# Get metrics
-print(f"WER: {results['overall_metrics']['mean_wer']:.4f}")
-print(f"CER: {results['overall_metrics']['mean_cer']:.4f}")
+```bash
+# Run evaluation on a dataset (eval set = JSON/JSONL/CSV with audio_path + reference)
+python experiments/run_evaluation.py --eval-set path/to/eval_set.json
 ```
+
+Then read `experiments/evaluation_outputs/evaluation_report.json` for baseline and improved-model WER/CER. See `docs/EVALUATION_SUMMARY.md` for details.
 
 ### Workflow 3: Fine-tuning Pipeline
 

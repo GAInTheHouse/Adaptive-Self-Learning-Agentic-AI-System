@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.evaluation.metrics import STTEvaluator
+from src.evaluation.metrics import STTEvaluator, EvaluationModule
 import pytest
 
 
@@ -166,6 +166,52 @@ def test_multiple_spaces():
     
     # Should handle whitespace normalization
     assert wer_score >= 0.0
+
+
+class TestEvaluationModule:
+    """Test unified EvaluationModule (streaming + batch)."""
+
+    def test_streaming_add_and_get_metrics(self):
+        mod = EvaluationModule()
+        mod.add_prediction("hello world", "hello world")
+        mod.add_prediction("goodbye", "good bye")
+        m = mod.get_metrics()
+        assert "wer" in m and "cer" in m and m["num_samples"] == 2
+        assert len(mod.results) == 2
+
+    def test_streaming_reset(self):
+        mod = EvaluationModule()
+        mod.add_prediction("a", "b")
+        mod.reset()
+        assert mod.get_metrics() == {}
+        assert mod.results == []
+
+    def test_batch_same_as_stt_evaluator(self):
+        refs = ["hello world", "test case"]
+        hyps = ["hello world", "test case"]
+        mod = EvaluationModule()
+        out = mod.evaluate_batch(refs, hyps)
+        assert out["num_samples"] == 2
+        assert out["wer"] == 0.0 and out["cer"] == 0.0
+
+    def test_evaluate_from_file_json(self, tmp_path):
+        path = tmp_path / "batch.json"
+        path.write_text('[{"reference": "hi", "hypothesis": "hi"}]')
+        mod = EvaluationModule()
+        m = mod.evaluate_from_file(path)
+        assert m["num_samples"] == 1 and m["wer"] == 0.0
+
+    def test_evaluate_from_file_jsonl(self, tmp_path):
+        path = tmp_path / "batch.jsonl"
+        path.write_text('{"reference": "a", "hypothesis": "a"}\n')
+        mod = EvaluationModule()
+        m = mod.evaluate_from_file(path)
+        assert m["num_samples"] == 1
+
+    def test_calculate_wer_cer_delegate(self):
+        mod = EvaluationModule()
+        assert mod.calculate_wer("hello", "hello") == 0.0
+        assert mod.calculate_cer("ab", "ab") == 0.0
 
 
 if __name__ == "__main__":

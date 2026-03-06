@@ -10,14 +10,24 @@ ENV/
 build/
 dist/
 *.egg-info/
+.venv
 
 # Data (never commit large datasets)
 data/raw/*
 data/processed/*
 data/augmented/*
 data/evaluation/*
+data/huggingface/
+data/openslr/
+data/git/
+data/manifests/*.csv
+data/.hf_cache/
 *.mp3
 *.flac
+*.wav
+*.tar.gz
+*.tgz
+*.zip
 !data/*/.gitkeep
 
 # Model files
@@ -48,6 +58,7 @@ credentials/
 # Logs
 logs/
 *.log
+.cursor/debug-*.log
 
 # OS
 .DS_Store
