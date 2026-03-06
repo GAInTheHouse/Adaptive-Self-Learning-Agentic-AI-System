@@ -6,7 +6,7 @@ from jiwer import wer, cer
 import json
 import csv
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Any, Union
 import logging
 import re
 import nltk
@@ -143,8 +143,8 @@ class STTEvaluator:
     
     def calculate_der(
         self,
-        reference_segments: List[Dict[str, any]],
-        hypothesis_segments: List[Dict[str, any]],
+        reference_segments: List[Dict[str, Any]],
+        hypothesis_segments: List[Dict[str, Any]],
         tolerance: float = 0.25
     ) -> float:
         """
